@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ระบบจัดการครุภัณฑ์อาคาร (Hospital Asset Manager)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Sarabun","Segoe UI",Tahoma,sans-serif;background:#eef2f7;color:#1e293b;font-size:14px}
+button{font-family:inherit;cursor:pointer;border:0;border-radius:6px;padding:8px 14px;font-size:14px}
+input,select,textarea{font-family:inherit;font-size:14px;padding:8px 10px;border:1px solid #cbd5e1;border-radius:6px;width:100%;background:#fff}
+.btn{background:#2563eb;color:#fff}.btn:hover{background:#1d4ed8}
+.btn-g{background:#059669;color:#fff}.btn-r{background:#dc2626;color:#fff}
+.btn-s{background:#e2e8f0;color:#334155}.btn-sm{padding:4px 9px;font-size:12px}
+.card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:14px}
+label{display:block;font-size:12px;color:#64748b;margin:0 0 4px}
+.row{display:grid;gap:10px}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}.g5{grid-template-columns:repeat(5,1fr)}
+.fld{margin-bottom:10px}
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e3a8a,#0e7490)}
+#login .box{background:#fff;padding:32px;border-radius:14px;width:380px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+#login h1{font-size:19px;margin-bottom:4px;color:#1e3a8a}#login p.sub{font-size:12px;color:#64748b;margin-bottom:18px}
+header{background:#1e3a8a;color:#fff;padding:10px 18px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:50}
+header h1{font-size:16px;font-weight:600}
+nav{background:#fff;padding:0 18px;display:flex;gap:2px;border-bottom:1px solid #e2e8f0;overflow-x:auto;position:sticky;top:44px;z-index:49}
+nav button{background:none;color:#475569;border-radius:0;border-bottom:3px solid transparent;white-space:nowrap}
+nav button.on{color:#1d4ed8;border-bottom-color:#1d4ed8;font-weight:600}
+main{padding:16px;max-width:1450px;margin:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:7px 9px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:top}
+th{background:#f1f5f9;font-size:12px;color:#475569}
+tr:hover td{background:#f8fafc}
+.chip{display:inline-block;background:#dbeafe;color:#1e40af;border-radius:20px;padding:2px 9px;font-size:11px}
+.chip.g{background:#dcfce7;color:#166534}.chip.y{background:#fef3c7;color:#92400e}.chip.r{background:#fee2e2;color:#991b1b}
+.chip.p{background:#ede9fe;color:#5b21b6}
+.stat{background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.08);border-left:4px solid #2563eb}
+.stat b{font-size:23px;display:block;color:#1e3a8a}.stat span{font-size:12px;color:#64748b}
+.floor{background:#fff;border-radius:10px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.floor>.hd{padding:12px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;background:#f8fafc;border-left:5px solid #1d4ed8}
+.floor>.hd:hover{background:#eff6ff}
+.floor .bd{padding:12px 16px;display:none}.floor.open .bd{display:block}
+.room{border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:8px}
+.room .rh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.65);display:flex;align-items:flex-start;justify-content:center;padding:24px;overflow:auto;z-index:100}
+.modal .box{background:#fff;border-radius:12px;padding:20px;width:100%;max-width:820px}
+.modal h3{font-size:16px;margin-bottom:14px;color:#1e3a8a}
+img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;cursor:pointer}
+.gal{display:flex;gap:8px;flex-wrap:wrap}
+.gal .it{width:120px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:11px}
+.gal .it img{width:100%;height:85px;object-fit:cover;cursor:pointer;display:block}
+.gal .it .cap{padding:4px 6px;color:#475569}
+.planwrap{position:relative;display:inline-block;max-width:100%}
+.planwrap img{max-width:100%;display:block;border-radius:8px}
+.pin{position:absolute;transform:translate(-50%,-100%);background:#dc2626;color:#fff;font-size:11px;padding:2px 7px;border-radius:12px;cursor:pointer;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.35);border:2px solid #fff}
+.pin.ok{background:#059669}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tabs button{background:#e2e8f0;color:#334155}.tabs button.on{background:#1d4ed8;color:#fff}
+.hidden{display:none!important}
+.hint{background:#f0f9ff;border-left:4px solid #0284c7;padding:9px 12px;border-radius:6px;font-size:12px;color:#0c4a6e;line-height:1.8}
+#a4{background:#fff;width:210mm;min-height:297mm;padding:15mm;margin:0 auto;box-shadow:0 0 12px rgba(0,0,0,.2);font-size:12px}
+#a4 h2{text-align:center;font-size:17px}#a4 h3{text-align:center;font-size:14px;font-weight:400;margin-bottom:12px}
+#a4 table{font-size:11px}#a4 th,#a4 td{border:1px solid #475569;padding:4px}
+.sign{display:flex;justify-content:space-around;margin-top:40px;text-align:center;font-size:12px}
+@media print{body{background:#fff}header,nav,.noprint{display:none!important}main{padding:0;max-width:none}
+ #a4{box-shadow:none;width:auto;padding:0;margin:0}@page{size:A4;margin:12mm}}
+@media(max-width:850px){.g2,.g3,.g4,.g5{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <div class="box">
+    <h1>ระบบจัดการครุภัณฑ์อาคาร</h1>
+    <p class="sub">Hospital Building Asset Management System</p>
+    <div class="fld"><label>อีเมล</label><input id="li_em" type="email" placeholder="you@hospital.go.th"></div>
+    <div class="fld"><label>รหัสผ่าน</label><input id="li_pw" type="password" placeholder="••••"></div>
+    <button class="btn" style="width:100%;padding:11px" onclick="doLogin()">เข้าสู่ระบบ</button>
+    <p id="li_err" style="color:#dc2626;font-size:12px;margin-top:8px"></p>
+    <p style="font-size:11px;color:#94a3b8;margin-top:14px;line-height:1.8">
+      ทดลอง (รหัสผ่าน 1234 ทุกบัญชี)<br>
+      admin@hospital.go.th — ผู้ดูแลระบบสูงสุด<br>
+      bio@hospital.go.th — แอดมินหมวดการแพทย์<br>
+      nurse7@hospital.go.th — หัวหน้าหอผู้ป่วยชั้น 7</p>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+<header>
+  <h1>ระบบจัดการครุภัณฑ์อาคาร</h1>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px">
+    <span id="who"></span><button class="btn-s btn-sm" onclick="logout()">ออกจากระบบ</button>
+  </div>
+</header>
+<nav id="nav"></nav>
+<main id="view"></main>
+</div>
+<div id="modal"></div>
+
+<script>
+/* ============================================================
+   ส่วนที่ 1 : ค่าคงที่ระบบ
+   ============================================================ */
+const ROLES={
+ superadmin:"ผู้ดูแลระบบสูงสุด",
+ bldadmin:"แอดมินอาคาร",
+ catadmin:"แอดมินประเภทครุภัณฑ์",
+ manager:"หัวหน้าหน่วยงาน/ชั้น",
+ staff:"เจ้าหน้าที่บันทึกข้อมูล",
+ viewer:"ผู้ดูข้อมูลอย่างเดียว"};
+/* เมนูใดแสดงกับสิทธิ์ใด */
+const MENU=[
+ ["dash","ภาพรวม (Dashboard)",["superadmin","bldadmin","catadmin","manager","staff","viewer"]],
+ ["plan","ผังอาคาร/ปักหมุดห้อง",["superadmin","bldadmin","catadmin","manager","staff","viewer"]],
+ ["floor","มุมมองตามชั้น",["superadmin","bldadmin","catadmin","manager","staff","viewer"]],
+ ["dept","ตามหน่วยงาน",["superadmin","bldadmin","catadmin","manager","staff","viewer"]],
+ ["asset","ตามครุภัณฑ์",["superadmin","bldadmin","catadmin","manager","staff","viewer"]],
+ ["master","ข้อมูลหลัก (อาคาร/ชั้น/ห้อง/หน่วยงาน/หมวด)",["superadmin","bldadmin"]],
+ ["print","ฟอร์ม A4",["superadmin","bldadmin","catadmin","manager","staff","viewer"]],
+ ["log","ประวัติการใช้งาน",["superadmin","bldadmin","catadmin"]],
+ ["user","ผู้ใช้และสิทธิ์",["superadmin"]],
+ ["data","สำรอง/นำเข้าข้อมูล",["superadmin","bldadmin"]]];
+const STATUS=["ใช้งานปกติ","รอติดตั้ง","ส่งซ่อม","ชำรุด","จำหน่ายแล้ว"];
+const ANGLES=["ป้ายหน้าห้อง/ทางเข้า","ภาพรวมจากประตู (มุมกว้าง)","มุมซ้ายของห้อง","มุมขวาของห้อง",
+ "ผนังตรงข้ามประตู","เพดาน (ไฟ/แอร์/สปริงเกอร์)","พื้น/ปลั๊กไฟ/หัวจ่ายก๊าซทางการแพทย์",
+ "ห้องน้ำในห้อง","หน้าต่าง/ระเบียง","มุมอื่น ๆ"];
+const PRESET={
+ "10":["เตียงผู้ป่วยไฟฟ้า 3 ไก","เตียงผู้ป่วยมือหมุน 2 ไก","เครื่องช่วยหายใจ (Ventilator)","เครื่องติดตามสัญญาณชีพ (Monitor)","เครื่องกระตุกหัวใจ (Defibrillator)","Infusion Pump","Syringe Pump","เครื่องดมยาสลบ","โคมไฟผ่าตัด","เตียงผ่าตัด","เครื่องจี้ไฟฟ้า","เครื่องนึ่งฆ่าเชื้อ (Autoclave)","ตู้อบเด็ก","รถเข็นนั่ง","รถเข็นนอน","เครื่องดูดเสมหะ","เครื่องวัดความดันอัตโนมัติ","ตู้เย็นเก็บเวชภัณฑ์","เครื่องปั่นเหวี่ยง","กล้องจุลทรรศน์","ตู้ชีวนิรภัย"],
+ "01":["โต๊ะทำงาน","เก้าอี้สำนักงาน","ตู้เอกสารบานเลื่อน","ตู้ล็อกเกอร์","เคาน์เตอร์พยาบาล","เครื่องปรับอากาศ","เครื่องถ่ายเอกสาร","เครื่องทำลายเอกสาร"],
+ "11":["คอมพิวเตอร์ตั้งโต๊ะ","คอมพิวเตอร์โน้ตบุ๊ก","เครื่องพิมพ์ Laser","เครื่องสำรองไฟ (UPS)","สแกนเนอร์","Access Point","Network Switch"],
+ "04":["ตู้เย็น","เครื่องฟอกอากาศ","ชุดเครื่องเสียง","กล้องวงจรปิด","เครื่องกำเนิดไฟฟ้า"],
+ "12":["ตู้แช่","เครื่องทำน้ำร้อน-น้ำเย็น","รถเข็นอาหาร","เครื่องซักผ้า"]};
+
+/* ============================================================
+   ส่วนที่ 2 : ที่เก็บไฟล์ (IndexedDB) — รูปและ PDF ไม่กิน localStorage
+   ============================================================ */
+let _idb=null, FC={};
+function idb(){return new Promise((res,rej)=>{if(_idb)return res(_idb);
+ const q=indexedDB.open("hosp_asset_files",1);
+ q.onupgradeneeded=e=>{if(!e.target.result.objectStoreNames.contains("f"))e.target.result.createObjectStore("f")};
+ q.onsuccess=e=>{_idb=e.target.result;res(_idb)};q.onerror=rej;});}
+async function putFile(data){const id=uid();const d=await idb();
+ await new Promise((res,rej)=>{const t=d.transaction("f","readwrite");t.objectStore("f").put(data,id);t.oncomplete=res;t.onerror=rej;});
+ FC[id]=data;return "f:"+id;}
+async function dropFile(ref){if(!ref||!ref.startsWith("f:"))return;const id=ref.slice(2);delete FC[id];
+ const d=await idb();d.transaction("f","readwrite").objectStore("f").delete(id);}
+function loadFiles(){return new Promise(async res=>{const d=await idb();
+ const c=d.transaction("f","readonly").objectStore("f").openCursor();
+ c.onsuccess=e=>{const cur=e.target.result;if(cur){FC[cur.key]=cur.value;cur.continue()}else res()};c.onerror=()=>res();});}
+function IMG(ref){if(!ref)return"";return ref.startsWith("f:")?(FC[ref.slice(2)]||""):ref;}
+/* ย่อรูปก่อนเก็บ เพื่อไม่ให้พื้นที่เต็มเร็ว */
+function shrink(file,max=1280,q=.72){return new Promise(res=>{const r=new FileReader();
+ r.onload=e=>{const im=new Image();im.onload=()=>{let w=im.width,h=im.height;
+  if(w>max||h>max){const s=Math.min(max/w,max/h);w=Math.round(w*s);h=Math.round(h*s);}
+  const c=document.createElement("canvas");c.width=w;c.height=h;
+  c.getContext("2d").drawImage(im,0,0,w,h);res(c.toDataURL("image/jpeg",q));};im.src=e.target.result;};
+ r.readAsDataURL(file);});}
+function readAs(file){return new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(file);});}
+function b2blob(d){const[h,b]=d.split(",");const m=h.match(/:(.*?);/)[1];const s=atob(b);
+ const u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return new Blob([u],{type:m});}
+function openRef(ref){const d=IMG(ref);if(!d)return alert("ไม่พบไฟล์");window.open(URL.createObjectURL(b2blob(d)),"_blank");}
+
+/* ============================================================
+   ส่วนที่ 3 : ฐานข้อมูลหลัก (localStorage) + ข้อมูลตั้งต้น
+   ============================================================ */
+const K="hosp_asset_db_v2";
+let DB=null, ME=null, TAB="dash";
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function save(){localStorage.setItem(K,JSON.stringify(DB));}
+function esc(s){return(s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function money(n){return(+n||0).toLocaleString("th-TH",{minimumFractionDigits:2});}
+function log(a,d){DB.logs.unshift({t:new Date().toISOString(),u:ME?ME.em:"system",act:a,detail:d});
+ if(DB.logs.length>3000)DB.logs.pop();}
+function load(){
+ const r=localStorage.getItem(K);
+ if(r){DB=JSON.parse(r);return;}
+ DB={buildings:[],floors:[],rooms:[],depts:[],cats:[],assets:[],users:[],logs:[]};
+ DB.cats=[["01","ครุภัณฑ์สำนักงาน"],["02","ครุภัณฑ์การศึกษา"],["03","ครุภัณฑ์ยานพาหนะและขนส่ง"],
+ ["04","ครุภัณฑ์ไฟฟ้าและวิทยุ"],["05","ครุภัณฑ์โฆษณาและเผยแพร่"],["06","ครุภัณฑ์การเกษตร"],
+ ["07","ครุภัณฑ์โรงงาน"],["08","ครุภัณฑ์ก่อสร้าง"],["09","ครุภัณฑ์สำรวจ"],
+ ["10","ครุภัณฑ์วิทยาศาสตร์และการแพทย์"],["11","ครุภัณฑ์คอมพิวเตอร์"],["12","ครุภัณฑ์งานบ้านงานครัว"],
+ ["13","ครุภัณฑ์กีฬา"],["14","ครุภัณฑ์ดนตรีและนาฏศิลป์"],["15","ครุภัณฑ์สนาม"],
+ ["16","ครุภัณฑ์อื่น ๆ"],["17","ครุภัณฑ์ต่ำกว่าเกณฑ์ (ต่ำกว่า 5,000 บาท)"]]
+ .map(c=>({code:c[0],name:c[1],sys:true}));
+ seed();
+ DB.users=[
+  {em:"admin@hospital.go.th",pw:"1234",name:"ผู้ดูแลระบบ",role:"superadmin",scopeB:[],scopeF:[],scopeC:[]},
+  {em:"bio@hospital.go.th",pw:"1234",name:"หัวหน้างานเครื่องมือแพทย์",role:"catadmin",scopeB:[],scopeF:[],scopeC:["10"]},
+  {em:"nurse7@hospital.go.th",pw:"1234",name:"หัวหน้าหอผู้ป่วยชั้น 7",role:"manager",
+   scopeB:[DB.buildings[0].id],scopeF:[DB.floors.find(f=>f.no==="7").id],scopeC:[]}];
+ save();
+}
+function seed(){
+ const b={id:uid(),code:"IPD",name:"อาคารผู้ป่วยใน (IPD)",area:"26,241 ตร.ม.",beds:"193 เตียง",
+  note:"OR 14 ห้อง / ICU 29 เตียง / VIP 49 ห้อง / จอดรถ 38 คัน",plan:"",img:""};
+ DB.buildings.push(b);
+ const D=n=>{const d={id:uid(),name:n,head:"-",tel:"-"};DB.depts.push(d);return d.id;};
+ const dSys=D("งานระบบอาคาร/ช่าง"),dPha=D("กลุ่มงานเภสัชกรรม"),dFood=D("งานโภชนาการ/ร้านค้า"),
+  dCssd=D("งานจ่ายกลางปราศจากเชื้อ (SCCD)"),dOr=D("กลุ่มงานการพยาบาลผู้ป่วยผ่าตัด (OR)"),
+  dIcu=D("หอผู้ป่วยวิกฤต (ICU)"),dLab=D("กลุ่มงานเทคนิคการแพทย์/พยาธิวิทยา"),
+  dM=D("หอผู้ป่วยสามัญชาย"),dF=D("หอผู้ป่วยสามัญหญิง"),dMix=D("หอผู้ป่วยสามัญรวม"),dVip=D("หอผู้ป่วยพิเศษ (VIP)");
+ const F=(no,name,dept)=>{const f={id:uid(),bid:b.id,no,name,dept,plan:"",img:""};DB.floors.push(f);return f;};
+ const R=(f,code,name,dept)=>DB.rooms.push({id:uid(),bid:b.id,fid:f.id,code,name,dept:dept||f.dept,
+  owner:"-",tel:"",note:"",x:null,y:null,photos:[]});
+ const fG=F("G","ชั้น G — งานระบบอาคาร/ที่จอดรถ",dSys);
+ ["ห้องเครื่องกำเนิดไฟฟ้า","ห้องควบคุมไฟฟ้าหลัก","ห้องงานช่าง","ห้อง Oxygen/Medical Gas","ห้องปั๊มน้ำ"]
+  .forEach((n,i)=>R(fG,"G-0"+(i+1),n));
+ const f1=F("1","ชั้น 1 — เภสัชกรรม/โรงอาหาร",dPha);
+ R(f1,"1-01","ห้องจ่ายยาผู้ป่วยใน");R(f1,"1-02","คลังเวชภัณฑ์");R(f1,"1-03","โรงอาหาร",dFood);R(f1,"1-04","ร้านค้าสวัสดิการ",dFood);
+ const f2=F("2","ชั้น 2 — จ่ายกลางปราศจากเชื้อ",dCssd);
+ ["ห้องล้างเครื่องมือ (Decontamination)","ห้องจัดชุดเครื่องมือ","ห้องนึ่งฆ่าเชื้อ","คลังปลอดเชื้อ"]
+  .forEach((n,i)=>R(f2,"2-0"+(i+1),n));
+ [3,4].forEach(k=>{const f=F(String(k),"ชั้น "+k+" — แผนกผ่าตัด (OR)",dOr);
+  for(let i=1;i<=7;i++)R(f,"OR"+k+"-"+i,"ห้องผ่าตัดที่ "+i);
+  R(f,k+"-RC","ห้องพักฟื้น (Recovery)");R(f,k+"-PR","ห้องเตรียมผ่าตัด");});
+ const f5=F("5","ชั้น 5 — หอผู้ป่วยวิกฤต (ICU)",dIcu);
+ for(let i=1;i<=29;i++)R(f5,"ICU-"+String(i).padStart(2,"0"),"ICU เตียง "+i);
+ R(f5,"5-NS","เคาน์เตอร์พยาบาล ICU");
+ const f6=F("6","ชั้น 6 — ห้องปฏิบัติการ/พยาธิวิทยา",dLab);
+ ["ห้อง Lab เคมีคลินิก","ห้องจุลชีววิทยา","ห้องพยาธิวิทยา","ธนาคารเลือด"].forEach((n,i)=>R(f6,"6-0"+(i+1),n));
+ [["7","หอผู้ป่วยสามัญชาย",dM],["8","หอผู้ป่วยสามัญหญิง",dF],["9","หอผู้ป่วยสามัญชาย/หญิง",dMix]]
+ .forEach(([no,nm,dp])=>{const f=F(no,"ชั้น "+no+" — "+nm+" 48 เตียง",dp);
+  for(let i=1;i<=8;i++)R(f,no+"-W"+i,"ห้องผู้ป่วยรวม "+i+" (6 เตียง)");
+  R(f,no+"-NS","เคาน์เตอร์พยาบาล");R(f,no+"-MED","ห้องยา/เวชภัณฑ์");R(f,no+"-ST","ห้องพักเจ้าหน้าที่");});
+ [["10",19],["11",19],["12",11]].forEach(([no,n])=>{const f=F(no,"ชั้น "+no+" — หอผู้ป่วย VIP "+n+" ห้อง",dVip);
+  for(let i=1;i<=n;i++)R(f,no+"-V"+i,"ห้อง VIP "+no+String(i).padStart(2,"0"));
+  R(f,no+"-NS","เคาน์เตอร์พยาบาล");});
+}
+/* ---- ตัวช่วยค้นหา ---- */
+const B=id=>DB.buildings.find(x=>x.id===id)||{};
+const FL=id=>DB.floors.find(x=>x.id===id)||{};
+const RM=id=>DB.rooms.find(x=>x.id===id)||{};
+const DP=id=>DB.depts.find(x=>x.id===id)||{};
+const CT=c=>DB.cats.find(x=>x.code===c)||{};
+
+/* ============================================================
+   ส่วนที่ 4 : สิทธิ์การใช้งาน
+   ============================================================ */
+const RL=()=>ME.role;
+function inB(bid){return RL()==="superadmin"||!ME.scopeB.length||ME.scopeB.includes(bid);}
+function inF(fid){return RL()==="superadmin"||!ME.scopeF.length||ME.scopeF.includes(fid);}
+function inC(c){return RL()==="superadmin"||!ME.scopeC.length||ME.scopeC.includes(c);}
+function canAsset(room,cat,act){
+ if(RL()==="viewer")return false;
+ if(RL()==="superadmin")return true;
+ if(RL()==="catadmin")return inC(cat);
+ if(RL()==="bldadmin")return inB(room.bid);
+ if(RL()==="manager")return inB(room.bid)&&inF(room.fid);
+ if(RL()==="staff")return act==="edit"&&inB(room.bid)&&inF(room.fid);
+ return false;}
+function canRoom(room,act){
+ if(RL()==="superadmin")return true;
+ if(RL()==="bldadmin")return inB(room.bid);
+ if(RL()==="manager"&&act==="edit")return inB(room.bid)&&inF(room.fid);
+ return false;}
+function canPlan(bid){return RL()==="superadmin"||(RL()==="bldadmin"&&inB(bid));}
+const canMaster=()=>["superadmin","bldadmin"].includes(RL());
+const isSuper=()=>RL()==="superadmin";
+/* กรองข้อมูลให้เห็นเฉพาะขอบเขตของตน */
+function visRooms(){return DB.rooms.filter(r=>{
+ if(["superadmin","catadmin"].includes(RL()))return true;
+ if(!inB(r.bid))return false;
+ if(["manager","staff"].includes(RL()))return inF(r.fid);
+ return true;});}
+function visAssets(){const ids=visRooms().map(r=>r.id);
+ return DB.assets.filter(a=>ids.includes(a.room)&&(RL()!=="catadmin"||inC(a.cat)));}
+
+/* ============================================================
+   ส่วนที่ 5 : เข้าสู่ระบบ / โครงหน้าจอ
+   ============================================================ */
+function doLogin(){
+ const em=li_em.value.trim().toLowerCase(),pw=li_pw.value;
+ const u=DB.users.find(x=>x.em.toLowerCase()===em&&x.pw===pw);
+ if(!u){li_err.textContent="อีเมลหรือรหัสผ่านไม่ถูกต้อง";return;}
+ ME=u;sessionStorage.setItem("hosp_me",u.em);log("login","เข้าสู่ระบบ");save();start();}
+function logout(){log("logout","ออกจากระบบ");save();sessionStorage.removeItem("hosp_me");location.reload();}
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&!ME&&(document.activeElement.id||"").startsWith("li_"))doLogin();});
+function start(){
+ login.classList.add("hidden");app.classList.remove("hidden");
+ let sc=[];
+ if(ME.scopeB.length)sc.push("อาคาร "+ME.scopeB.map(i=>B(i).code||"-").join(","));
+ if(ME.scopeF.length)sc.push("ชั้น "+ME.scopeF.map(i=>FL(i).no||"-").join(","));
+ if(ME.scopeC.length)sc.push("หมวด "+ME.scopeC.join(","));
+ who.textContent=ME.name+" · "+ROLES[ME.role]+(sc.length?" · "+sc.join(" | "):" · ทุกขอบเขต");
+ renderNav();go("dash");}
+function renderNav(){
+ nav.innerHTML=MENU.filter(m=>m[2].includes(RL()))
+  .map(m=>`<button class="${TAB===m[0]?'on':''}" onclick="go('${m[0]}')">${m[1]}</button>`).join("");}
+function go(t){
+ const m=MENU.find(x=>x[0]===t);
+ if(!m||!m[2].includes(RL()))t="dash";
+ TAB=t;renderNav();
+ ({dash:vDash,plan:vPlan,floor:vFloor,dept:vDept,asset:vAsset,master:vMaster,print:vPrint,log:vLog,user:vUser,data:vData})[TAB]();}
+
+/* ============================================================
+   ส่วนที่ 6 : Dashboard + ฟิลเตอร์
+   ============================================================ */
+let DF={b:"",f:"",d:"",c:"",s:"",q:"",d1:"",d2:""};
+function fSel(id,label,opts,val,w){return `<div><label>${label}</label><select id="${id}" onchange="applyDF()">
+ <option value="">ทั้งหมด</option>${opts.map(o=>`<option value="${o[0]}" ${o[0]===val?"selected":""}>${esc(o[1])}</option>`).join("")}</select></div>`;}
+function filterBar(){
+ const bs=DB.buildings.filter(b=>inB(b.id)).map(b=>[b.id,b.name]);
+ const fs=DB.floors.filter(f=>(!DF.b||f.bid===DF.b)&&inF(f.id)).map(f=>[f.id,B(f.bid).code+" · "+f.name]);
+ return `<div class="card noprint"><div class="row g4">
+  ${fSel("df_b","อาคาร",bs,DF.b)}${fSel("df_f","ชั้น",fs,DF.f)}
+  ${fSel("df_d","หน่วยงาน",DB.depts.map(d=>[d.id,d.name]),DF.d)}
+  ${fSel("df_c","หมวดครุภัณฑ์",DB.cats.filter(c=>inC(c.code)).map(c=>[c.code,c.code+" "+c.name]),DF.c)}</div>
+  <div class="row g4" style="margin-top:8px">
+  ${fSel("df_s","สถานะ",STATUS.map(s=>[s,s]),DF.s)}
+  <div><label>ซื้อตั้งแต่วันที่</label><input type="date" id="df_d1" value="${DF.d1}" onchange="applyDF()"></div>
+  <div><label>ถึงวันที่</label><input type="date" id="df_d2" value="${DF.d2}" onchange="applyDF()"></div>
+  <div><label>คำค้น (ชื่อ/เลขครุภัณฑ์/ยี่ห้อ/ผู้รับผิดชอบ)</label><input id="df_q" value="${esc(DF.q)}" oninput="applyDF()"></div></div>
+  <div style="margin-top:8px"><button class="btn-s btn-sm" onclick="DF={b:'',f:'',d:'',c:'',s:'',q:'',d1:'',d2:''};go(TAB)">ล้างตัวกรอง</button>
+  <button class="btn-s btn-sm" onclick="printList()">พิมพ์ผลลัพธ์เป็นฟอร์ม A4</button>
+  <button class="btn-s btn-sm" onclick="expCsv('asset')">ส่งออก CSV</button></div></div>`;}
+function applyDF(){
+ DF={b:df_b.value,f:df_f.value,d:df_d.value,c:df_c.value,s:df_s.value,q:df_q.value,d1:df_d1.value,d2:df_d2.value};
+ if(DF.f&&FL(DF.f).bid!==DF.b&&DF.b)DF.f="";
+ go(TAB);}
+function fRows(){
+ let rows=visAssets().map(a=>({a,r:RM(a.room)}));
+ rows=rows.filter(x=>x.r.id);
+ if(DF.b)rows=rows.filter(x=>x.r.bid===DF.b);
+ if(DF.f)rows=rows.filter(x=>x.r.fid===DF.f);
+ if(DF.d)rows=rows.filter(x=>x.r.dept===DF.d);
+ if(DF.c)rows=rows.filter(x=>x.a.cat===DF.c);
+ if(DF.s)rows=rows.filter(x=>x.a.status===DF.s);
+ if(DF.d1)rows=rows.filter(x=>x.a.buy&&x.a.buy>=DF.d1);
+ if(DF.d2)rows=rows.filter(x=>x.a.buy&&x.a.buy<=DF.d2);
+ if(DF.q){const q=DF.q.toLowerCase();
+  rows=rows.filter(x=>[x.a.name,x.a.no,x.a.sn,x.a.brand,x.a.model,x.a.owner,x.a.vendor,x.a.note].join(" ").toLowerCase().includes(q));}
+ window._rows=rows;return rows;}
+function vDash(){
+ const rows=fRows(),A=rows.map(x=>x.a);
+ const qty=A.reduce((s,a)=>s+(+a.qty||1),0);
+ const val=A.reduce((s,a)=>s+(+a.price||0)*(+a.qty||1),0);
+ const byFl={},byCat={},byDept={};
+ rows.forEach(({a,r})=>{byFl[r.fid]=(byFl[r.fid]||0)+(+a.qty||1);
+  byCat[a.cat]=(byCat[a.cat]||0)+(+a.qty||1);byDept[r.dept]=(byDept[r.dept]||0)+(+a.qty||1);});
+ const today=new Date(),soon=new Date(Date.now()+90*864e5).toISOString().slice(0,10);
+ const war=A.filter(a=>a.war&&a.war<=soon);
+ const bad=A.filter(a=>a.status&&a.status!=="ใช้งานปกติ");
+ const noNo=A.filter(a=>!a.no);
+ view.innerHTML=filterBar()+`
+ <div class="row g5" style="margin-bottom:14px">
+  <div class="stat"><b>${DB.buildings.filter(b=>inB(b.id)).length}</b><span>อาคาร</span></div>
+  <div class="stat" style="border-color:#0891b2"><b>${visRooms().length}</b><span>ห้อง/พื้นที่</span></div>
+  <div class="stat" style="border-color:#059669"><b>${qty}</b><span>ชิ้นครุภัณฑ์ (ตามตัวกรอง)</span></div>
+  <div class="stat" style="border-color:#7c3aed"><b>${money(val)}</b><span>มูลค่ารวม (บาท)</span></div>
+  <div class="stat" style="border-color:#dc2626"><b>${bad.length}</b><span>รายการต้องติดตาม</span></div></div>
+ <div class="row g3">
+  <div class="card"><h3 style="margin-bottom:8px">แยกตามชั้น</h3><table>
+   <tr><th>อาคาร/ชั้น</th><th style="text-align:right">ชิ้น</th></tr>
+   ${DB.floors.filter(f=>inB(f.bid)&&inF(f.id)&&(!DF.b||f.bid===DF.b)).map(f=>
+    `<tr><td>${esc(B(f.bid).code)} · ${esc(f.name)}</td><td style="text-align:right">${byFl[f.id]||0}</td></tr>`).join("")}</table></div>
+  <div class="card"><h3 style="margin-bottom:8px">แยกตามหมวดกรมบัญชีกลาง</h3><table>
+   <tr><th>หมวด</th><th style="text-align:right">ชิ้น</th></tr>
+   ${DB.cats.filter(c=>byCat[c.code]).map(c=>`<tr><td>${c.code} · ${esc(c.name)}</td><td style="text-align:right">${byCat[c.code]}</td></tr>`).join("")
+    ||'<tr><td colspan=2 style="color:#94a3b8">ยังไม่มีข้อมูล</td></tr>'}</table></div>
+  <div class="card"><h3 style="margin-bottom:8px">แยกตามหน่วยงาน</h3><table>
+   <tr><th>หน่วยงาน</th><th style="text-align:right">ชิ้น</th></tr>
+   ${DB.depts.filter(d=>byDept[d.id]).map(d=>`<tr><td>${esc(d.name)}</td><td style="text-align:right">${byDept[d.id]}</td></tr>`).join("")
+    ||'<tr><td colspan=2 style="color:#94a3b8">ยังไม่มีข้อมูล</td></tr>'}</table></div></div>
+ <div class="row g2">
+  <div class="card"><h3 style="margin-bottom:8px">รายการที่ต้องติดตาม (ชำรุด/ส่งซ่อม/รอติดตั้ง)</h3><table>
+   <tr><th>ครุภัณฑ์</th><th>ตำแหน่ง</th><th>สถานะ</th><th>ผู้รับผิดชอบ</th></tr>
+   ${bad.slice(0,30).map(a=>{const r=RM(a.room);return `<tr><td>${esc(a.name)}</td>
+    <td>${esc(B(r.bid).code)} ชั้น ${esc(FL(r.fid).no)} · ${esc(r.name)}</td>
+    <td><span class="chip ${a.status==="ชำรุด"?"r":"y"}">${esc(a.status)}</span></td><td>${esc(a.owner)}</td></tr>`}).join("")
+    ||'<tr><td colspan=4 style="color:#94a3b8">ไม่มีรายการค้าง</td></tr>'}</table></div>
+  <div class="card"><h3 style="margin-bottom:8px">ประกันหมด/ใกล้หมดภายใน 90 วัน · ยังไม่ออกเลขครุภัณฑ์ (${noNo.length})</h3><table>
+   <tr><th>ครุภัณฑ์</th><th>วันหมดประกัน</th><th>ผู้ขาย</th></tr>
+   ${war.slice(0,30).map(a=>`<tr><td>${esc(a.name)}</td><td><span class="chip ${a.war<today.toISOString().slice(0,10)?'r':'y'}">${esc(a.war)}</span></td><td>${esc(a.vendor)}</td></tr>`).join("")
+    ||'<tr><td colspan=3 style="color:#94a3b8">ไม่มีรายการ</td></tr>'}</table></div></div>`;}
+
+/* ============================================================
+   ส่วนที่ 7 : ผังอาคาร + ปักหมุดห้อง
+   ============================================================ */
+let PL={bid:"",fid:"",pin:false,room:""};
+function vPlan(){
+ const bs=DB.buildings.filter(b=>inB(b.id));
+ if(!bs.length){view.innerHTML='<div class="card">ยังไม่มีอาคาร กรุณาเพิ่มที่เมนูข้อมูลหลัก</div>';return;}
+ if(!PL.bid||!bs.find(b=>b.id===PL.bid))PL.bid=bs[0].id;
+ const b=B(PL.bid),fls=DB.floors.filter(f=>f.bid===b.id&&inF(f.id));
+ if(!fls.find(f=>f.id===PL.fid))PL.fid=fls[0]?fls[0].id:"";
+ const f=FL(PL.fid),rms=DB.rooms.filter(r=>r.fid===PL.fid);
+ view.innerHTML=`<div class="card noprint"><div class="row g3">
+  <div><label>เลือกอาคาร</label><select onchange="PL.bid=this.value;PL.fid='';vPlan()">
+   ${bs.map(x=>`<option value="${x.id}" ${x.id===b.id?"selected":""}>${esc(x.code)} — ${esc(x.name)}</option>`).join("")}</select></div>
+  <div><label>เลือกชั้น</label><select onchange="PL.fid=this.value;vPlan()">
+   ${fls.map(x=>`<option value="${x.id}" ${x.id===PL.fid?"selected":""}>${esc(x.name)}</option>`).join("")}</select></div>
+  <div style="display:flex;align-items:flex-end;gap:6px">
+   ${canPlan(b.id)?`<button class="btn-s" onclick="upBldImg('${b.id}','img')">อัปโหลดภาพรวมอาคาร</button>
+   <button class="btn-s" onclick="upBldImg('${b.id}','plan')">อัปโหลดผังอาคาร</button>`:""}</div></div></div>
+ <div class="row g2">
+  <div class="card"><h3 style="margin-bottom:8px">${esc(b.name)}</h3>
+   <p style="color:#64748b;font-size:12px">พื้นที่ ${esc(b.area)} · ${esc(b.beds)} · ${esc(b.note)}</p>
+   ${b.img?`<img src="${IMG(b.img)}" style="max-width:100%;border-radius:8px;margin-top:8px">`:'<div class="hint" style="margin-top:8px">ยังไม่มีภาพรวมอาคาร</div>'}</div>
+  <div class="card"><h3 style="margin-bottom:8px">ผังอาคาร (Site plan)</h3>
+   ${b.plan?`<img src="${IMG(b.plan)}" style="max-width:100%;border-radius:8px">`:'<div class="hint">ยังไม่มีผังอาคาร</div>'}</div></div>
+ <div class="card"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+   <h3>ผังชั้น: ${esc(f.name||"-")}</h3>
+   ${canPlan(b.id)?`<button class="btn-s btn-sm" onclick="upFloorImg('${PL.fid}','plan')">อัปโหลด/เปลี่ยนผังชั้น</button>
+    <button class="btn-s btn-sm" onclick="upFloorImg('${PL.fid}','img')">อัปโหลดภาพถ่ายชั้น</button>
+    <button class="${PL.pin?'btn-g':'btn'} btn-sm" onclick="PL.pin=!PL.pin;vPlan()">${PL.pin?"กำลังปักหมุด — คลิกบนผัง":"เปิดโหมดปักหมุดห้อง"}</button>`:""}
+   ${PL.pin?`<select style="width:auto" onchange="PL.room=this.value">
+     <option value="">— เลือกห้องที่จะปักหมุด —</option>
+     ${rms.map(r=>`<option value="${r.id}" ${r.id===PL.room?"selected":""}>${esc(r.code)} ${esc(r.name)}${r.x!=null?" (ปักแล้ว)":""}</option>`).join("")}</select>`:""}
+  </div>
+  ${PL.pin?'<div class="hint" style="margin:8px 0">วิธีใช้: เลือกห้องจากรายการ แล้วคลิกตำแหน่งบนผังชั้น หมุดจะบันทึกทันที · คลิกหมุดสีเขียวเพื่อดูรายละเอียดห้อง</div>':""}
+  ${f.plan?`<div class="planwrap" id="pw" onclick="clickPlan(event)">
+    <img src="${IMG(f.plan)}">
+    ${rms.filter(r=>r.x!=null).map(r=>`<div class="pin ok" style="left:${r.x}%;top:${r.y}%" onclick="event.stopPropagation();roomView('${r.id}')">${esc(r.code)}</div>`).join("")}
+   </div>`:'<div class="hint" style="margin-top:8px">ยังไม่มีผังชั้นนี้ — อัปโหลดรูปผัง (JPG/PNG) แล้วจึงปักหมุดห้องได้</div>'}
+  ${f.img?`<div style="margin-top:10px"><b style="font-size:13px">ภาพถ่ายชั้น</b><br><img src="${IMG(f.img)}" style="max-width:100%;border-radius:8px;margin-top:6px"></div>`:""}
+  <div style="margin-top:10px;font-size:12px;color:#64748b">ห้องที่ยังไม่ได้ปักหมุด:
+   ${rms.filter(r=>r.x==null).map(r=>`<span class="chip y" style="cursor:pointer" onclick="roomView('${r.id}')">${esc(r.code)}</span>`).join(" ")||"ครบทุกห้องแล้ว"}</div></div>`;}
+async function upBldImg(id,key){const d=await pickImg();if(!d)return;const b=B(id);await dropFile(b[key]);
+ b[key]=await putFile(d);log("plan","อัปเดตรูป "+key+" อาคาร "+b.code);save();vPlan();}
+async function upFloorImg(id,key){const d=await pickImg();if(!d)return;const f=FL(id);await dropFile(f[key]);
+ f[key]=await putFile(d);log("plan","อัปเดตรูป "+key+" "+f.name);save();vPlan();}
+function pickImg(max){return new Promise(res=>{const i=document.createElement("input");i.type="file";i.accept="image/*";
+ i.onchange=async()=>{const f=i.files[0];if(!f)return res(null);res(await shrink(f,max||1600,.75));};i.click();});}
+function clickPlan(e){
+ if(!PL.pin)return;
+ if(!PL.room)return alert("กรุณาเลือกห้องที่จะปักหมุดก่อน");
+ const w=document.getElementById("pw").getBoundingClientRect();
+ const r=RM(PL.room);
+ r.x=+(((e.clientX-w.left)/w.width)*100).toFixed(2);
+ r.y=+(((e.clientY-w.top)/w.height)*100).toFixed(2);
+ log("pin","ปักหมุดห้อง "+r.code);save();vPlan();}
+
+/* ============================================================
+   ส่วนที่ 8 : มุมมองตามชั้น / หน่วยงาน / ครุภัณฑ์
+   ============================================================ */
+let openFl={};
+function vFloor(){view.innerHTML=filterBar()+'<div id="fl"></div>';flList();}
+function flList(){
+ const rows=fRows();
+ const bs=DB.buildings.filter(b=>inB(b.id)&&(!DF.b||b.id===DF.b));
+ fl.innerHTML=bs.map(b=>{
+  const fls=DB.floors.filter(f=>f.bid===b.id&&inF(f.id)&&(!DF.f||f.id===DF.f));
+  return `<h3 style="margin:12px 0 8px;color:#1e3a8a">${esc(b.code)} — ${esc(b.name)}</h3>`+fls.map(f=>{
+   const rms=DB.rooms.filter(r=>r.fid===f.id&&(!DF.d||r.dept===DF.d));
+   let cnt=0;
+   const body=rms.map(r=>{
+    const as=rows.filter(x=>x.a.room===r.id).map(x=>x.a);
+    if((DF.q||DF.c||DF.s||DF.d1||DF.d2)&&!as.length)return"";
+    cnt+=as.reduce((s,a)=>s+(+a.qty||1),0);
+    return `<div class="room"><div class="rh">
+     <div><b>${esc(r.code)} · ${esc(r.name)}</b> ${r.x!=null?'<span class="chip g">ปักหมุดแล้ว</span>':""}
+      <div style="font-size:12px;color:#64748b">หน่วยงาน: ${esc(DP(r.dept).name||"-")} · ผู้รับผิดชอบ: ${esc(r.owner)} ${r.tel?"· โทร "+esc(r.tel):""}</div></div>
+     <div class="noprint" style="display:flex;gap:5px">
+      <button class="btn-s btn-sm" onclick="roomView('${r.id}')">รายละเอียด/ภาพห้อง</button>
+      ${canAsset(r,DF.c||"10","edit")?`<button class="btn btn-sm" onclick="assetForm('${r.id}')">+ ครุภัณฑ์</button>`:""}
+      <button class="btn-s btn-sm" onclick="printRoom('${r.id}')">ฟอร์ม A4</button></div></div>
+     ${as.length?assetTable(as,r):'<div style="color:#94a3b8;font-size:12px;margin-top:6px">ยังไม่มีครุภัณฑ์ในห้องนี้</div>'}</div>`;
+   }).join("");
+   if(!body)return"";
+   const op=openFl[f.id]||DF.q||DF.c||DF.f;
+   return `<div class="floor ${op?"open":""}"><div class="hd" onclick="openFl['${f.id}']=!openFl['${f.id}'];flList()">
+    <b style="font-size:15px;color:#1e3a8a">${esc(f.name)}</b>
+    <span style="color:#64748b">${esc(DP(f.dept).name||"")}</span>
+    <span class="chip" style="margin-left:auto">${rms.length} ห้อง</span><span class="chip g">${cnt} ชิ้น</span>
+    ${inF(f.id)&&inB(f.id?f.bid:"")?"":'<span class="chip y">อ่านอย่างเดียว</span>'}</div>
+    <div class="bd">${body}</div></div>`;}).join("");
+ }).join("")||'<div class="card">ไม่พบข้อมูลตามตัวกรอง</div>';}
+function assetTable(as,r){
+ return `<table style="margin-top:8px"><tr><th>รูป</th><th>เลขครุภัณฑ์</th><th>รายการ</th><th>หมวด</th><th>ยี่ห้อ/รุ่น</th>
+  <th>จน.</th><th>ราคา/หน่วย</th><th>สถานะ</th><th>ผู้รับผิดชอบ</th><th>ไฟล์</th><th class="noprint"></th></tr>
+  ${as.map(a=>`<tr>
+   <td>${a.img?`<img class="thumb" src="${IMG(a.img)}" onclick="bigImg('${a.img}')">`:'<span style="color:#cbd5e1">—</span>'}</td>
+   <td>${esc(a.no)||'<span style="color:#cbd5e1">รอออกเลข</span>'}</td>
+   <td><b>${esc(a.name)}</b>${a.spec?`<div style="font-size:11px;color:#64748b">${esc(a.spec)}</div>`:""}</td>
+   <td><span class="chip">${esc(a.cat)}</span></td>
+   <td>${esc(a.brand)}<br><span style="color:#64748b;font-size:11px">${esc(a.model)}</span></td>
+   <td>${a.qty||1}</td><td style="text-align:right">${money(a.price)}</td>
+   <td><span class="chip ${a.status==="ใช้งานปกติ"?"g":a.status==="ชำรุด"?"r":"y"}">${esc(a.status)}</span></td>
+   <td>${esc(a.owner)}</td>
+   <td>${a.pdf?`<button class="btn-s btn-sm" onclick="openRef('${a.pdf.ref}')">PDF</button>`:"—"}</td>
+   <td class="noprint" style="white-space:nowrap">
+    <button class="btn-s btn-sm" onclick="assetView('${a.id}')">ดู</button>
+    ${canAsset(r,a.cat,"edit")?`<button class="btn-s btn-sm" onclick="assetForm('${r.id}','${a.id}')">แก้</button>`:""}
+    ${canAsset(r,a.cat,"del")?`<button class="btn-r btn-sm" onclick="delAsset('${a.id}')">ลบ</button>`:""}</td></tr>`).join("")}</table>`;}
+function vDept(){
+ const rows=fRows();
+ view.innerHTML=filterBar()+DB.depts.filter(d=>!DF.d||d.id===DF.d).map(d=>{
+  const rs=visRooms().filter(r=>r.dept===d.id&&(!DF.b||r.bid===DF.b)&&(!DF.f||r.fid===DF.f));
+  if(!rs.length)return"";
+  const ids=rs.map(r=>r.id),as=rows.filter(x=>ids.includes(x.a.room));
+  const val=as.reduce((s,x)=>s+(+x.a.price||0)*(+x.a.qty||1),0);
+  return `<div class="card"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+   <b style="color:#1e3a8a">${esc(d.name)}</b><span style="font-size:12px;color:#64748b">หัวหน้า: ${esc(d.head)} · ${esc(d.tel)}</span>
+   <span class="chip">${rs.length} ห้อง</span><span class="chip g">${as.reduce((s,x)=>s+(+x.a.qty||1),0)} ชิ้น</span>
+   <span class="chip y">${money(val)} บาท</span></div>
+   <table style="margin-top:8px"><tr><th>อาคาร/ชั้น</th><th>ห้อง</th><th>ครุภัณฑ์</th><th>หมวด</th><th>จน.</th><th>สถานะ</th><th>ผู้รับผิดชอบ</th></tr>
+   ${as.map(({a,r})=>`<tr><td>${esc(B(r.bid).code)} / ${esc(FL(r.fid).no)}</td><td>${esc(r.code)} ${esc(r.name)}</td>
+    <td>${esc(a.name)}</td><td>${esc(a.cat)}</td><td>${a.qty||1}</td><td>${esc(a.status)}</td><td>${esc(a.owner)}</td></tr>`).join("")
+    ||'<tr><td colspan=7 style="color:#94a3b8">ยังไม่มีครุภัณฑ์</td></tr>'}</table></div>`;}).join("")
+  ||'<div class="card">ไม่พบหน่วยงานตามตัวกรอง</div>';}
+function vAsset(){
+ const rows=fRows();
+ const tot=rows.reduce((s,x)=>s+(+x.a.price||0)*(+x.a.qty||1),0);
+ view.innerHTML=filterBar()+`<div class="card"><div style="margin-bottom:8px">พบ <b>${rows.length}</b> รายการ ·
+  รวม <b>${rows.reduce((s,x)=>s+(+x.a.qty||1),0)}</b> ชิ้น · มูลค่า <b>${money(tot)}</b> บาท</div>
+  <table><tr><th>รูป</th><th>เลขครุภัณฑ์</th><th>รายการ</th><th>หมวด</th><th>อาคาร/ชั้น/ห้อง</th><th>ยี่ห้อ/รุ่น</th>
+   <th>จน.</th><th>ราคา</th><th>วันที่ซื้อ</th><th>สถานะ</th><th class="noprint"></th></tr>
+  ${rows.map(({a,r})=>`<tr>
+   <td>${a.img?`<img class="thumb" src="${IMG(a.img)}" onclick="bigImg('${a.img}')">`:"—"}</td>
+   <td>${esc(a.no)}</td><td><b>${esc(a.name)}</b></td><td><span class="chip">${esc(a.cat)}</span></td>
+   <td>${esc(B(r.bid).code)} / ${esc(FL(r.fid).no)} / ${esc(r.name)}</td>
+   <td>${esc(a.brand)} ${esc(a.model)}</td><td>${a.qty||1}</td><td style="text-align:right">${money(a.price)}</td>
+   <td>${esc(a.buy)}</td><td><span class="chip ${a.status==="ใช้งานปกติ"?"g":a.status==="ชำรุด"?"r":"y"}">${esc(a.status)}</span></td>
+   <td class="noprint"><button class="btn-s btn-sm" onclick="assetView('${a.id}')">ดู</button></td></tr>`).join("")
+   ||'<tr><td colspan=11 style="color:#94a3b8">ไม่พบรายการ</td></tr>'}</table></div>`;}
+
+/* ============================================================
+   ส่วนที่ 9 : ห้อง — รายละเอียด/ภาพหลายมุม
+   ============================================================ */
+function roomView(id){
+ const r=RM(id),as=DB.assets.filter(a=>a.room===id&&(RL()!=="catadmin"||inC(a.cat)));
+ mo(`<h3>${esc(r.code)} · ${esc(r.name)}</h3>
+  <p style="font-size:12px;color:#64748b;margin-bottom:10px">
+   ${esc(B(r.bid).name)} · ${esc(FL(r.fid).name)} · หน่วยงาน ${esc(DP(r.dept).name||"-")}<br>
+   ผู้รับผิดชอบ: ${esc(r.owner)} ${r.tel?"· โทร "+esc(r.tel):""} ${r.note?"<br>หมายเหตุ: "+esc(r.note):""}</p>
+  <div class="hint"><b>ไกด์การถ่ายภาพห้อง (ไม่บังคับ แต่แนะนำให้ครบ 6 มุมแรก)</b><br>
+   ยืนที่ประตูถ่ายภาพรวมก่อน แล้วหมุนตามเข็มนาฬิกา ซ้าย → ตรงข้าม → ขวา ถ่ายแนวนอน เปิดไฟทุกดวง
+   ให้เห็นครุภัณฑ์ชิ้นใหญ่และเลขครุภัณฑ์ติดผนัง จากนั้นถ่ายเพดาน (แอร์/ไฟ/สปริงเกอร์) และพื้น (ปลั๊ก/หัวจ่ายก๊าซ)</div>
+  <div style="margin:10px 0" class="gal">
+   ${(r.photos||[]).map((p,i)=>`<div class="it"><img src="${IMG(p.ref)}" onclick="bigImg('${p.ref}')">
+    <div class="cap">${esc(p.angle)}${canRoom(r,"edit")?` <span style="color:#dc2626;cursor:pointer" onclick="delPhoto('${r.id}',${i})">ลบ</span>`:""}</div></div>`).join("")
+    ||'<span style="color:#94a3b8;font-size:12px">ยังไม่มีภาพห้อง</span>'}</div>
+  ${canRoom(r,"edit")?`<div class="row g2"><div><label>เพิ่มภาพห้องตามมุม</label>
+   <select id="ph_ang">${ANGLES.map(a=>`<option>${a}</option>`).join("")}</select></div>
+   <div style="display:flex;align-items:flex-end"><button class="btn-g" onclick="addPhoto('${r.id}')">เลือกรูปและบันทึก</button></div></div>`:""}
+  <h3 style="margin-top:14px">ครุภัณฑ์ในห้อง (${as.length} รายการ)</h3>
+  ${as.length?assetTable(as,r):'<p style="color:#94a3b8;font-size:12px">ยังไม่มีครุภัณฑ์</p>'}
+  <div style="text-align:right;margin-top:12px">
+   ${canAsset(r,"10","edit")?`<button class="btn" onclick="assetForm('${r.id}')">+ เพิ่มครุภัณฑ์</button>`:""}
+   <button class="btn-s" onclick="printRoom('${r.id}')">ฟอร์ม A4</button>
+   <button class="btn-s" onclick="mc()">ปิด</button></div>`);}
+async function addPhoto(id){const ang=ph_ang.value;const d=await pickImg(1280);if(!d)return;
+ const r=RM(id);r.photos=r.photos||[];r.photos.push({angle:ang,ref:await putFile(d)});
+ log("photo","เพิ่มภาพห้อง "+r.code+" มุม "+ang);save();roomView(id);}
+async function delPhoto(id,i){const r=RM(id);if(!confirm("ลบภาพนี้?"))return;
+ await dropFile(r.photos[i].ref);r.photos.splice(i,1);log("photo","ลบภาพห้อง "+r.code);save();roomView(id);}
+function bigImg(ref){mo(`<img src="${IMG(ref)}" style="width:100%;border-radius:10px">
+ <div style="text-align:right;margin-top:10px"><button class="btn" onclick="mc()">ปิด</button></div>`);}
+
+/* ============================================================
+   ส่วนที่ 10 : ฟอร์มครุภัณฑ์ (รวมแนบ PDF)
+   ============================================================ */
+let TMP={};
+function assetForm(roomId,id){
+ const a=id?DB.assets.find(x=>x.id===id):{cat:"10",qty:1,status:"รอติดตั้ง",room:roomId};
+ const r=RM(a.room||roomId);
+ if(!canAsset(r,a.cat,"edit"))return alert("คุณไม่มีสิทธิ์แก้ไขรายการนี้");
+ TMP={img:a.img||"",pdf:a.pdf||null};
+ const cats=DB.cats.filter(c=>RL()!=="catadmin"||inC(c.code));
+ const rooms=visRooms();
+ mo(`<h3>${id?"แก้ไขครุภัณฑ์":"เพิ่มครุภัณฑ์"} — ${esc(r.code)} ${esc(r.name)}</h3>
+ <div class="row g2">
+  <div class="fld"><label>หมวดครุภัณฑ์ (กรมบัญชีกลาง)</label><select id="f_cat" onchange="fillPreset()">
+   ${cats.map(c=>`<option value="${c.code}" ${c.code===a.cat?"selected":""}>${c.code} · ${esc(c.name)}</option>`).join("")}</select></div>
+  <div class="fld"><label>ห้องที่ติดตั้ง (ย้ายห้องได้)</label><select id="f_room">
+   ${rooms.map(x=>`<option value="${x.id}" ${x.id===(a.room||roomId)?"selected":""}>${esc(B(x.bid).code)} / ชั้น ${esc(FL(x.fid).no)} / ${esc(x.code)} ${esc(x.name)}</option>`).join("")}</select></div></div>
+ <div class="fld"><label>ชื่อครุภัณฑ์ (เลือกจากรายการแนะนำ หรือพิมพ์เองได้อิสระ)</label>
+  <input id="f_name" list="dl_name" value="${esc(a.name)}" placeholder="เช่น เตียงผู้ป่วยไฟฟ้า 3 ไก"><datalist id="dl_name"></datalist></div>
+ <div class="row g3">
+  <div class="fld"><label>เลขครุภัณฑ์ (เว้นว่างได้ ใส่ภายหลัง)</label><input id="f_no" value="${esc(a.no)}" placeholder="6515-001-0001/1-68"></div>
+  <div class="fld"><label>Serial Number</label><input id="f_sn" value="${esc(a.sn)}"></div>
+  <div class="fld"><label>จำนวน</label><input id="f_qty" type="number" min="1" value="${a.qty||1}"></div></div>
+ <div class="row g3">
+  <div class="fld"><label>ยี่ห้อ</label><input id="f_brand" value="${esc(a.brand)}"></div>
+  <div class="fld"><label>รุ่น / Model</label><input id="f_model" value="${esc(a.model)}"></div>
+  <div class="fld"><label>ราคาต่อหน่วย (บาท)</label><input id="f_price" type="number" step="0.01" value="${a.price||""}"></div></div>
+ <div class="row g3">
+  <div class="fld"><label>บริษัทที่ซื้อ/ผู้ขาย</label><input id="f_vendor" value="${esc(a.vendor)}"></div>
+  <div class="fld"><label>วันที่ซื้อ/รับมอบ</label><input id="f_buy" type="date" value="${esc(a.buy)}"></div>
+  <div class="fld"><label>วันหมดประกัน</label><input id="f_war" type="date" value="${esc(a.war)}"></div></div>
+ <div class="row g3">
+  <div class="fld"><label>ผู้รับผิดชอบครุภัณฑ์</label><input id="f_own" value="${esc(a.owner||r.owner)}"></div>
+  <div class="fld"><label>สถานะ</label><select id="f_st">${STATUS.map(s=>`<option ${s===a.status?"selected":""}>${s}</option>`).join("")}</select></div>
+  <div class="fld"><label>แหล่งงบประมาณ</label><input id="f_bud" value="${esc(a.budget)}" placeholder="งบลงทุน 2568 / เงินบำรุง"></div></div>
+ <div class="fld"><label>รายละเอียด/คุณลักษณะเฉพาะ (Spec ย่อ)</label><textarea id="f_spec" rows="2">${esc(a.spec)}</textarea></div>
+ <div class="fld"><label>หมายเหตุอื่น ๆ</label><textarea id="f_note" rows="2">${esc(a.note)}</textarea></div>
+ <div class="row g2">
+  <div class="fld"><label>รูปภาพครุภัณฑ์ (ระบบย่อขนาดอัตโนมัติ)</label>
+   <input type="file" accept="image/*" onchange="pickAssetImg(this)">
+   <img id="prev" src="${IMG(TMP.img)}" style="max-height:120px;border-radius:8px;margin-top:6px;${TMP.img?"":"display:none"}"></div>
+  <div class="fld"><label>ไฟล์ PDF คุณลักษณะเฉพาะ (ไม่บังคับ · ไม่เกิน 3 MB)</label>
+   <input type="file" accept="application/pdf" onchange="pickPdf(this)">
+   <div id="pdfinfo" style="font-size:12px;color:#475569;margin-top:6px">${a.pdf?esc(a.pdf.name)+" ("+Math.round(a.pdf.size/1024)+" KB)":"ยังไม่มีไฟล์แนบ"}</div></div></div>
+ <div style="text-align:right;margin-top:12px"><button class="btn-s" onclick="mc()">ยกเลิก</button>
+  <button class="btn-g" onclick="saveAsset('${id||""}')">บันทึกข้อมูล</button></div>`);
+ fillPreset();}
+function fillPreset(){dl_name.innerHTML=(PRESET[f_cat.value]||[]).map(n=>`<option>${n}</option>`).join("");}
+async function pickAssetImg(el){const f=el.files[0];if(!f)return;const d=await shrink(f,1280,.72);
+ TMP.img=await putFile(d);prev.src=d;prev.style.display="block";}
+async function pickPdf(el){const f=el.files[0];if(!f)return;
+ if(f.size>3*1024*1024)return alert("ไฟล์ใหญ่เกิน 3 MB กรุณาบีบอัดไฟล์ PDF ก่อน");
+ const d=await readAs(f);TMP.pdf={ref:await putFile(d),name:f.name,size:f.size};
+ pdfinfo.textContent=f.name+" ("+Math.round(f.size/1024)+" KB) แนบแล้ว";}
+function saveAsset(id){
+ const room=RM(f_room.value);
+ if(!canAsset(room,f_cat.value,"edit"))return alert("คุณไม่มีสิทธิ์บันทึกในขอบเขตนี้");
+ if(!f_name.value.trim())return alert("กรุณาระบุชื่อครุภัณฑ์");
+ const o={room:room.id,cat:f_cat.value,name:f_name.value.trim(),no:f_no.value,sn:f_sn.value,qty:+f_qty.value||1,
+  brand:f_brand.value,model:f_model.value,price:+f_price.value||0,vendor:f_vendor.value,buy:f_buy.value,
+  war:f_war.value,owner:f_own.value,status:f_st.value,budget:f_bud.value,spec:f_spec.value,note:f_note.value,
+  img:TMP.img,pdf:TMP.pdf};
+ if(id){Object.assign(DB.assets.find(x=>x.id===id),o);log("edit_asset","แก้ไข "+o.name+" ("+o.no+")");}
+ else{o.id=uid();o.created=new Date().toISOString();o.by=ME.em;DB.assets.push(o);log("add_asset","เพิ่ม "+o.name+" x"+o.qty+" @"+room.code);}
+ save();mc();go(TAB);}
+function delAsset(id){const a=DB.assets.find(x=>x.id===id),r=RM(a.room);
+ if(!canAsset(r,a.cat,"del"))return alert("ไม่มีสิทธิ์ลบ");
+ if(!confirm("ยืนยันลบ "+a.name+" ?"))return;
+ dropFile(a.img);if(a.pdf)dropFile(a.pdf.ref);
+ DB.assets=DB.assets.filter(x=>x.id!==id);log("del_asset","ลบ "+a.name+" ("+a.no+")");save();go(TAB);}
+function assetView(id){
+ const a=DB.assets.find(x=>x.id===id),r=RM(a.room);
+ const L=(k,v)=>`<tr><td style="width:170px;color:#64748b">${k}</td><td><b>${esc(v)||"-"}</b></td></tr>`;
+ mo(`<h3>${esc(a.name)}</h3>
+  ${a.img?`<img src="${IMG(a.img)}" style="max-height:220px;border-radius:10px;margin-bottom:12px">`:""}
+  <table>${L("เลขครุภัณฑ์",a.no)}${L("Serial",a.sn)}${L("หมวด",a.cat+" · "+(CT(a.cat).name||""))}
+  ${L("ที่ตั้ง",B(r.bid).name+" / "+FL(r.fid).name+" / "+r.code+" "+r.name)}${L("หน่วยงาน",DP(r.dept).name)}
+  ${L("ยี่ห้อ/รุ่น",(a.brand||"")+" "+(a.model||""))}${L("จำนวน",a.qty)}${L("ราคาต่อหน่วย",money(a.price)+" บาท")}
+  ${L("มูลค่ารวม",money((a.price||0)*(a.qty||1))+" บาท")}${L("บริษัทที่ซื้อ",a.vendor)}${L("วันที่ซื้อ",a.buy)}
+  ${L("หมดประกัน",a.war)}${L("แหล่งงบประมาณ",a.budget)}${L("ผู้รับผิดชอบ",a.owner)}${L("สถานะ",a.status)}
+  ${L("คุณลักษณะ",a.spec)}${L("หมายเหตุ",a.note)}${L("บันทึกโดย",a.by)}</table>
+  ${a.pdf?`<p style="margin-top:10px"><button class="btn" onclick="openRef('${a.pdf.ref}')">เปิดไฟล์ PDF คุณลักษณะ (${esc(a.pdf.name)})</button></p>`:""}
+  <div style="text-align:right;margin-top:12px"><button class="btn-s" onclick="printTag('${a.id}')">ฟอร์ม A4 รายชิ้น</button>
+  <button class="btn" onclick="mc()">ปิด</button></div>`);}
+
+/* ============================================================
+   ส่วนที่ 11 : ข้อมูลหลัก — อาคาร/ชั้น/ห้อง/หน่วยงาน/หมวด
+   ============================================================ */
+let MT="bld";
+function vMaster(){
+ const t=[["bld","อาคาร"],["flr","ชั้น"],["rm","ห้อง"],["dept","หน่วยงาน"],["cat","หมวดครุภัณฑ์"]];
+ view.innerHTML=`<div class="tabs">${t.map(x=>`<button class="${MT===x[0]?"on":""}" onclick="MT='${x[0]}';vMaster()">${x[1]}</button>`).join("")}</div><div id="mbox"></div>`;
+ ({bld:mBld,flr:mFlr,rm:mRm,dept:mDept,cat:mCat})[MT]();}
+function mBld(){
+ mbox.innerHTML=`<div class="card"><b>อาคารทั้งหมด</b>
+  ${isSuper()?`<button class="btn btn-sm" style="float:right" onclick="bldForm()">+ เพิ่มอาคาร</button>`:""}
+  <table style="margin-top:10px"><tr><th>รหัส</th><th>ชื่ออาคาร</th><th>พื้นที่</th><th>เตียง</th><th>ชั้น</th><th>ห้อง</th><th>ผัง</th><th></th></tr>
+  ${DB.buildings.filter(b=>inB(b.id)).map(b=>`<tr><td>${esc(b.code)}</td><td>${esc(b.name)}</td><td>${esc(b.area)}</td>
+   <td>${esc(b.beds)}</td><td>${DB.floors.filter(f=>f.bid===b.id).length}</td><td>${DB.rooms.filter(r=>r.bid===b.id).length}</td>
+   <td>${b.plan?'<span class="chip g">มีผัง</span>':'<span class="chip y">ยังไม่มี</span>'}</td>
+   <td>${canPlan(b.id)?`<button class="btn-s btn-sm" onclick="bldForm('${b.id}')">แก้</button>`:""}
+    ${isSuper()?`<button class="btn-r btn-sm" onclick="delBld('${b.id}')">ลบ</button>`:""}</td></tr>`).join("")}</table></div>`;}
+function bldForm(id){
+ const b=id?B(id):{code:"",name:"",area:"",beds:"",note:""};
+ mo(`<h3>${id?"แก้ไขอาคาร":"เพิ่มอาคารใหม่"}</h3>
+  <div class="row g2"><div class="fld"><label>รหัสอาคาร</label><input id="b_code" value="${esc(b.code)}" placeholder="IPD / OPD"></div>
+  <div class="fld"><label>ชื่ออาคาร</label><input id="b_name" value="${esc(b.name)}"></div></div>
+  <div class="row g2"><div class="fld"><label>พื้นที่ใช้สอย</label><input id="b_area" value="${esc(b.area)}"></div>
+  <div class="fld"><label>จำนวนเตียง</label><input id="b_beds" value="${esc(b.beds)}"></div></div>
+  <div class="fld"><label>หมายเหตุ</label><input id="b_note" value="${esc(b.note)}"></div>
+  <div style="text-align:right"><button class="btn-s" onclick="mc()">ยกเลิก</button>
+  <button class="btn" onclick="saveBld('${id||""}')">บันทึก</button></div>`);}
+function saveBld(id){
+ const o={code:b_code.value.trim(),name:b_name.value.trim(),area:b_area.value,beds:b_beds.value,note:b_note.value};
+ if(!o.code||!o.name)return alert("กรอกรหัสและชื่ออาคาร");
+ if(id)Object.assign(B(id),o);else{o.id=uid();o.plan="";o.img="";DB.buildings.push(o);}
+ log("master","บันทึกอาคาร "+o.code);save();mc();vMaster();}
+function delBld(id){
+ if(DB.floors.some(f=>f.bid===id))return alert("ลบไม่ได้ — ยังมีชั้นอยู่ในอาคารนี้");
+ if(!confirm("ยืนยันลบอาคาร?"))return;
+ log("master","ลบอาคาร "+B(id).code);DB.buildings=DB.buildings.filter(x=>x.id!==id);save();vMaster();}
+function mFlr(){
+ mbox.innerHTML=`<div class="card"><b>ชั้นทั้งหมด</b>
+  ${canMaster()?`<button class="btn btn-sm" style="float:right" onclick="flrForm()">+ เพิ่มชั้น</button>`:""}
+  <table style="margin-top:10px"><tr><th>อาคาร</th><th>ชั้นที่</th><th>ชื่อชั้น</th><th>หน่วยงานหลัก</th><th>ห้อง</th><th>ผังชั้น</th><th></th></tr>
+  ${DB.floors.filter(f=>inB(f.bid)).map(f=>`<tr><td>${esc(B(f.bid).code)}</td><td>${esc(f.no)}</td><td>${esc(f.name)}</td>
+   <td>${esc(DP(f.dept).name||"-")}</td><td>${DB.rooms.filter(r=>r.fid===f.id).length}</td>
+   <td>${f.plan?'<span class="chip g">มี</span>':'<span class="chip y">ยังไม่มี</span>'}</td>
+   <td><button class="btn-s btn-sm" onclick="flrForm('${f.id}')">แก้</button>
+   ${canPlan(f.bid)?`<button class="btn-r btn-sm" onclick="delFlr('${f.id}')">ลบ</button>`:""}</td></tr>`).join("")}</table></div>`;}
+function flrForm(id){
+ const f=id?FL(id):{bid:DB.buildings[0]?.id,no:"",name:"",dept:""};
+ mo(`<h3>${id?"แก้ไขชั้น":"เพิ่มชั้นใหม่"}</h3>
+  <div class="row g2"><div class="fld"><label>อาคาร</label><select id="l_b">
+   ${DB.buildings.filter(b=>inB(b.id)).map(b=>`<option value="${b.id}" ${b.id===f.bid?"selected":""}>${esc(b.code)} ${esc(b.name)}</option>`).join("")}</select></div>
+  <div class="fld"><label>ชั้นที่ (G, 1, 2, M ...)</label><input id="l_no" value="${esc(f.no)}"></div></div>
+  <div class="fld"><label>ชื่อชั้น</label><input id="l_nm" value="${esc(f.name)}" placeholder="ชั้น 7 — หอผู้ป่วยสามัญชาย"></div>
+  <div class="fld"><label>หน่วยงานหลักของชั้น</label><select id="l_d"><option value="">-</option>
+   ${DB.depts.map(d=>`<option value="${d.id}" ${d.id===f.dept?"selected":""}>${esc(d.name)}</option>`).join("")}</select></div>
+  <div style="text-align:right"><button class="btn-s" onclick="mc()">ยกเลิก</button>
+  <button class="btn" onclick="saveFlr('${id||""}')">บันทึก</button></div>`);}
+function saveFlr(id){
+ const o={bid:l_b.value,no:l_no.value.trim(),name:l_nm.value.trim()||("ชั้น "+l_no.value),dept:l_d.value};
+ if(!o.no)return alert("ระบุชั้น");
+ if(id)Object.assign(FL(id),o);else{o.id=uid();o.plan="";o.img="";DB.floors.push(o);}
+ log("master","บันทึกชั้น "+o.name);save();mc();vMaster();}
+function delFlr(id){
+ if(DB.rooms.some(r=>r.fid===id))return alert("ลบไม่ได้ — ยังมีห้องอยู่ในชั้นนี้");
+ if(!confirm("ยืนยันลบชั้น?"))return;log("master","ลบชั้น "+FL(id).name);
+ DB.floors=DB.floors.filter(x=>x.id!==id);save();vMaster();}
+let RMB="";
+function mRm(){
+ const bs=DB.buildings.filter(b=>inB(b.id));if(!RMB)RMB=bs[0]?.id||"";
+ const rms=DB.rooms.filter(r=>r.bid===RMB&&inF(r.fid));
+ mbox.innerHTML=`<div class="card"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+  <b>ห้องทั้งหมด</b><select style="width:auto" onchange="RMB=this.value;vMaster()">
+  ${bs.map(b=>`<option value="${b.id}" ${b.id===RMB?"selected":""}>${esc(b.code)} ${esc(b.name)}</option>`).join("")}</select>
+  ${canMaster()?`<button class="btn btn-sm" style="margin-left:auto" onclick="rmForm()">+ เพิ่มห้อง</button>
+  <button class="btn-s btn-sm" onclick="bulkRoom()">+ เพิ่มห้องหลายห้องอัตโนมัติ</button>`:""}</div>
+  <table style="margin-top:10px"><tr><th>ชั้น</th><th>รหัสห้อง</th><th>ชื่อห้อง</th><th>หน่วยงาน</th><th>ผู้รับผิดชอบ</th><th>หมุด</th><th>ภาพ</th><th>ครุภัณฑ์</th><th></th></tr>
+  ${rms.map(r=>`<tr><td>${esc(FL(r.fid).no)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(DP(r.dept).name||"-")}</td>
+   <td>${esc(r.owner)}</td><td>${r.x!=null?'<span class="chip g">ปักแล้ว</span>':'<span class="chip y">ยังไม่ปัก</span>'}</td>
+   <td>${(r.photos||[]).length}</td><td>${DB.assets.filter(a=>a.room===r.id).length}</td>
+   <td>${canRoom(r,"edit")?`<button class="btn-s btn-sm" onclick="rmForm('${r.id}')">แก้</button>`:""}
+    ${canRoom(r,"del")?`<button class="btn-r btn-sm" onclick="delRm('${r.id}')">ลบ</button>`:""}</td></tr>`).join("")}</table></div>`;}
+function rmForm(id){
+ const r=id?RM(id):{bid:RMB,fid:"",code:"",name:"",dept:"",owner:"",tel:"",note:""};
+ mo(`<h3>${id?"แก้ไขห้อง":"เพิ่มห้องใหม่"}</h3>
+  <div class="row g2"><div class="fld"><label>อาคาร</label><select id="m_b" onchange="reFlr()">
+   ${DB.buildings.filter(b=>inB(b.id)).map(b=>`<option value="${b.id}" ${b.id===r.bid?"selected":""}>${esc(b.code)} ${esc(b.name)}</option>`).join("")}</select></div>
+  <div class="fld"><label>ชั้น</label><select id="m_f"></select></div></div>
+  <div class="row g2"><div class="fld"><label>รหัสห้อง</label><input id="m_c" value="${esc(r.code)}"></div>
+  <div class="fld"><label>ชื่อห้อง</label><input id="m_n" value="${esc(r.name)}"></div></div>
+  <div class="row g3"><div class="fld"><label>หน่วยงาน</label><select id="m_d"><option value="">-</option>
+   ${DB.depts.map(d=>`<option value="${d.id}" ${d.id===r.dept?"selected":""}>${esc(d.name)}</option>`).join("")}</select></div>
+  <div class="fld"><label>ผู้รับผิดชอบห้อง</label><input id="m_o" value="${esc(r.owner)}"></div>
+  <div class="fld"><label>เบอร์ติดต่อ/เบอร์ภายใน</label><input id="m_t" value="${esc(r.tel)}"></div></div>
+  <div class="fld"><label>หมายเหตุ</label><input id="m_no" value="${esc(r.note)}"></div>
+  <div style="text-align:right"><button class="btn-s" onclick="mc()">ยกเลิก</button>
+  <button class="btn" onclick="saveRm('${id||""}','${r.fid||""}')">บันทึก</button></div>`);
+ reFlr(r.fid);}
+function reFlr(sel){const b=m_b.value;
+ m_f.innerHTML=DB.floors.filter(f=>f.bid===b).map(f=>`<option value="${f.id}" ${f.id===sel?"selected":""}>${esc(f.name)}</option>`).join("");}
+function saveRm(id){
+ const o={bid:m_b.value,fid:m_f.value,code:m_c.value.trim(),name:m_n.value.trim(),dept:m_d.value,
+  owner:m_o.value||"-",tel:m_t.value,note:m_no.value};
+ if(!o.fid)return alert("เลือกชั้นก่อน");
+ if(!o.code||!o.name)return alert("กรอกรหัสและชื่อห้อง");
+ if(id)Object.assign(RM(id),o);else{o.id=uid();o.x=null;o.y=null;o.photos=[];DB.rooms.push(o);}
+ log("master","บันทึกห้อง "+o.code+" "+o.name);save();mc();vMaster();}
+function delRm(id){
+ if(DB.assets.some(a=>a.room===id))return alert("ลบไม่ได้ — ยังมีครุภัณฑ์อยู่ในห้องนี้");
+ if(!confirm("ยืนยันลบห้อง?"))return;const r=RM(id);(r.photos||[]).forEach(p=>dropFile(p.ref));
+ log("master","ลบห้อง "+r.code);DB.rooms=DB.rooms.filter(x=>x.id!==id);save();vMaster();}
+function bulkRoom(){
+ mo(`<h3>เพิ่มห้องหลายห้องอัตโนมัติ</h3>
+  <div class="row g2"><div class="fld"><label>อาคาร</label><select id="k_b" onchange="kFlr()">
+   ${DB.buildings.filter(b=>inB(b.id)).map(b=>`<option value="${b.id}">${esc(b.code)} ${esc(b.name)}</option>`).join("")}</select></div>
+  <div class="fld"><label>ชั้น</label><select id="k_f"></select></div></div>
+  <div class="row g4"><div class="fld"><label>คำนำหน้ารหัส</label><input id="k_pre" value="7-W" ></div>
+  <div class="fld"><label>ชื่อห้อง (ต่อท้ายด้วยเลข)</label><input id="k_nm" value="ห้องผู้ป่วยรวม "></div>
+  <div class="fld"><label>เริ่มที่เลข</label><input id="k_s" type="number" value="1"></div>
+  <div class="fld"><label>ถึงเลข</label><input id="k_e" type="number" value="8"></div></div>
+  <div class="fld"><label>หน่วยงาน</label><select id="k_d"><option value="">-</option>
+   ${DB.depts.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("")}</select></div>
+  <div style="text-align:right"><button class="btn-s" onclick="mc()">ยกเลิก</button>
+  <button class="btn-g" onclick="runBulk()">สร้างห้อง</button></div>`);kFlr();}
+function kFlr(){k_f.innerHTML=DB.floors.filter(f=>f.bid===k_b.value).map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join("");}
+function runBulk(){
+ const s=+k_s.value,e=+k_e.value;if(e<s)return alert("ช่วงเลขไม่ถูกต้อง");
+ for(let i=s;i<=e;i++)DB.rooms.push({id:uid(),bid:k_b.value,fid:k_f.value,code:k_pre.value+i,
+  name:k_nm.value+i,dept:k_d.value,owner:"-",tel:"",note:"",x:null,y:null,photos:[]});
+ log("master","สร้างห้องอัตโนมัติ "+(e-s+1)+" ห้อง");save();mc();vMaster();}
+function mDept(){
+ mbox.innerHTML=`<div class="card"><b>หน่วยงาน</b>
+  ${canMaster()?`<button class="btn btn-sm" style="float:right" onclick="deptForm()">+ เพิ่มหน่วยงาน</button>`:""}
+  <table style="margin-top:10px"><tr><th>ชื่อหน่วยงาน</th><th>หัวหน้าหน่วยงาน</th><th>เบอร์ติดต่อ</th><th>ห้องที่ดูแล</th><th></th></tr>
+  ${DB.depts.map(d=>`<tr><td>${esc(d.name)}</td><td>${esc(d.head)}</td><td>${esc(d.tel)}</td>
+   <td>${DB.rooms.filter(r=>r.dept===d.id).length}</td>
+   <td><button class="btn-s btn-sm" onclick="deptForm('${d.id}')">แก้</button>
+   <button class="btn-r btn-sm" onclick="delDept('${d.id}')">ลบ</button></td></tr>`).join("")}</table></div>`;}
+function deptForm(id){
+ const d=id?DP(id):{name:"",head:"",tel:""};
+ mo(`<h3>${id?"แก้ไขหน่วยงาน":"เพิ่มหน่วยงาน"}</h3>
+  <div class="fld"><label>ชื่อหน่วยงาน</label><input id="d_n" value="${esc(d.name)}"></div>
+  <div class="row g2"><div class="fld"><label>หัวหน้าหน่วยงาน</label><input id="d_h" value="${esc(d.head)}"></div>
+  <div class="fld"><label>เบอร์ติดต่อ</label><input id="d_t" value="${esc(d.tel)}"></div></div>
+  <div style="text-align:right"><button class="btn-s" onclick="mc()">ยกเลิก</button>
+  <button class="btn" onclick="saveDept('${id||""}')">บันทึก</button></div>`);}
+function saveDept(id){
+ const o={name:d_n.value.trim(),head:d_h.value||"-",tel:d_t.value||"-"};
+ if(!o.name)return alert("กรอกชื่อหน่วยงาน");
+ if(id)Object.assign(DP(id),o);else{o.id=uid();DB.depts.push(o);}
+ log("master","บันทึกหน่วยงาน "+o.name);save();mc();vMaster();}
+function delDept(id){
+ if(DB.rooms.some(r=>r.dept===id)||DB.floors.some(f=>f.dept===id))return alert("ลบไม่ได้ — ยังมีห้อง/ชั้นใช้หน่วยงานนี้อยู่");
+ if(!confirm("ยืนยันลบหน่วยงาน?"))return;log("master","ลบหน่วยงาน "+DP(id).name);
+ DB.depts=DB.depts.filter(x=>x.id!==id);save();vMaster();}
+function mCat(){
+ mbox.innerHTML=`<div class="card"><b>หมวดครุภัณฑ์ (ตามการจำแนกประเภทของกรมบัญชีกลาง + หมวดที่กำหนดเอง)</b>
+  ${isSuper()?`<button class="btn btn-sm" style="float:right" onclick="catForm()">+ เพิ่มหมวดอื่น ๆ</button>`:""}
+  <div class="hint" style="margin-top:8px">หมวด 01-17 เป็นหมวดมาตรฐาน แก้ชื่อได้แต่ลบไม่ได้ · หมวดที่เพิ่มเองตั้งรหัสได้อิสระ เช่น 90 ครุภัณฑ์เฉพาะทางของโรงพยาบาล</div>
+  <table style="margin-top:10px"><tr><th>รหัส</th><th>ชื่อหมวด</th><th>ประเภท</th><th>จำนวนครุภัณฑ์</th><th></th></tr>
+  ${DB.cats.map(c=>`<tr><td><b>${esc(c.code)}</b></td><td>${esc(c.name)}</td>
+   <td>${c.sys?'<span class="chip">มาตรฐาน</span>':'<span class="chip p">กำหนดเอง</span>'}</td>
+   <td>${DB.assets.filter(a=>a.cat===c.code).length}</td>
+   <td>${isSuper()?`<button class="btn-s btn-sm" onclick="catForm('${c.code}')">แก้ชื่อ</button>
+    ${c.sys?"":`<button class="btn-r btn-sm" onclick="delCat('${c.code}')">ลบ</button>`}`:""}</td></tr>`).join("")}</table></div>`;}
+function catForm(code){
+ const c=code?CT(code):{code:"",name:"",sys:false};
+ mo(`<h3>${code?"แก้ไขหมวด":"เพิ่มหมวดครุภัณฑ์ (อื่น ๆ)"}</h3>
+  <div class="row g2"><div class="fld"><label>รหัสหมวด</label>
+   <input id="c_c" value="${esc(c.code)}" ${code?"disabled":""} placeholder="เช่น 90"></div>
+  <div class="fld"><label>ชื่อหมวด</label><input id="c_n" value="${esc(c.name)}"></div></div>
+  <div style="text-align:right"><button class="btn-s" onclick="mc()">ยกเลิก</button>
+  <button class="btn" onclick="saveCat('${code||""}')">บันทึก</button></div>`);}
+function saveCat(code){
+ const nm=c_n.value.trim();if(!nm)return alert("กรอกชื่อหมวด");
+ if(code){CT(code).name=nm;}
+ else{const cd=c_c.value.trim();if(!cd)return alert("กรอกรหัสหมวด");
+  if(CT(cd).code)return alert("รหัสนี้มีอยู่แล้ว");DB.cats.push({code:cd,name:nm,sys:false});}
+ log("master","บันทึกหมวด "+nm);save();mc();vMaster();}
+function delCat(code){
+ if(DB.assets.some(a=>a.cat===code))return alert("ลบไม่ได้ — ยังมีครุภัณฑ์อยู่ในหมวดนี้");
+ if(!confirm("ยืนยันลบหมวด?"))return;log("master","ลบหมวด "+code);
+ DB.cats=DB.cats.filter(c=>c.code!==code);save();vMaster();}
+
+/* ============================================================
+   ส่วนที่ 12 : ฟอร์ม A4
+   ============================================================ */
+const HEAD=`<div style="text-align:center"><h2>แบบสำรวจ/ทะเบียนครุภัณฑ์</h2>
+ <h3>โรงพยาบาล .................................................. ปีงบประมาณ ................</h3></div>`;
+const TH=`<tr><th>ที่</th><th>เลขครุภัณฑ์</th><th>รายการ/คุณลักษณะ</th><th>ยี่ห้อ/รุ่น</th><th>จน.</th>
+ <th>ราคา/หน่วย</th><th>รวม</th><th>วันที่ซื้อ</th><th>ผู้ขาย</th><th>ผู้รับผิดชอบ</th><th>สถานะ</th></tr>`;
+const SIGN=`<div class="sign"><div>ลงชื่อ ....................................<br>(..................................)<br>ผู้รับผิดชอบห้อง</div>
+ <div>ลงชื่อ ....................................<br>(..................................)<br>หัวหน้าหน่วยงาน</div>
+ <div>ลงชื่อ ....................................<br>(..................................)<br>เจ้าหน้าที่พัสดุ</div></div>`;
+function tRows(list){return list.map((a,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${esc(a.no)}</td>
+ <td>${esc(a.name)}${a.spec?"<br><span style='font-size:10px'>"+esc(a.spec)+"</span>":""}</td>
+ <td>${esc(a.brand)} ${esc(a.model)}</td><td style="text-align:center">${a.qty||1}</td>
+ <td style="text-align:right">${money(a.price)}</td><td style="text-align:right">${money((+a.price||0)*(+a.qty||1))}</td>
+ <td>${esc(a.buy)}</td><td>${esc(a.vendor)}</td><td>${esc(a.owner)}</td><td>${esc(a.status)}</td></tr>`).join("");}
+function vPrint(){
+ view.innerHTML=`<div class="card noprint"><b>เลือกรูปแบบฟอร์ม A4</b>
+  <div class="row g4" style="margin-top:10px">
+   <div><label>พิมพ์รายห้อง</label><select id="p_room">${visRooms().map(r=>`<option value="${r.id}">${esc(B(r.bid).code)} / ชั้น ${esc(FL(r.fid).no)} / ${esc(r.code)} ${esc(r.name)}</option>`).join("")}</select></div>
+   <div><label>พิมพ์ทั้งชั้น</label><select id="p_fl">${DB.floors.filter(f=>inB(f.bid)&&inF(f.id)).map(f=>`<option value="${f.id}">${esc(B(f.bid).code)} · ${esc(f.name)}</option>`).join("")}</select></div>
+   <div><label>พิมพ์ทั้งอาคาร</label><select id="p_b">${DB.buildings.filter(b=>inB(b.id)).map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join("")}</select></div>
+   <div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap">
+    <button class="btn btn-sm" onclick="printRoom(p_room.value)">รายห้อง</button>
+    <button class="btn-g btn-sm" onclick="printFloor(p_fl.value)">ทั้งชั้น</button>
+    <button class="btn-s btn-sm" onclick="printBld(p_b.value)">ทั้งอาคาร</button></div></div></div><div id="a4box"></div>`;}
+function paper(html){
+ if(TAB!=="print")go("print");
+ setTimeout(()=>{a4box.innerHTML=`<div class="noprint" style="text-align:center;margin:10px">
+  <button class="btn" onclick="window.print()">สั่งพิมพ์ / บันทึกเป็น PDF (A4)</button></div><div id="a4">${html}</div>`;
+  a4box.scrollIntoView({behavior:"smooth"});},40);}
+function printRoom(id){
+ const r=RM(id),as=DB.assets.filter(a=>a.room===id);
+ const tot=as.reduce((s,a)=>s+(+a.price||0)*(+a.qty||1),0);
+ paper(`${HEAD}<table style="border:0;margin-bottom:6px"><tr>
+  <td style="border:0"><b>อาคาร:</b> ${esc(B(r.bid).name)}</td><td style="border:0"><b>ชั้น:</b> ${esc(FL(r.fid).no)}</td>
+  <td style="border:0"><b>ห้อง:</b> ${esc(r.code)} ${esc(r.name)}</td></tr><tr>
+  <td style="border:0"><b>หน่วยงาน:</b> ${esc(DP(r.dept).name||"-")}</td>
+  <td style="border:0" colspan="2"><b>ผู้รับผิดชอบ:</b> ${esc(r.owner)} ${r.tel?"· โทร "+esc(r.tel):""}</td></tr></table>
+  <table>${TH}${tRows(as)||'<tr><td colspan=11 style="text-align:center">- ไม่มีรายการ -</td></tr>'}
+  <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งสิ้น</b></td><td style="text-align:right"><b>${money(tot)}</b></td><td colspan="4"></td></tr></table>
+  <p style="margin-top:6px;font-size:11px">พิมพ์เมื่อ ${new Date().toLocaleString("th-TH")} โดย ${esc(ME.name)}</p>${SIGN}`);}
+function printFloor(fid){
+ const f=FL(fid);let html=`${HEAD}<p><b>${esc(B(f.bid).name)} — ${esc(f.name)}</b></p>`,g=0;
+ DB.rooms.filter(r=>r.fid===fid).forEach(r=>{const as=DB.assets.filter(a=>a.room===r.id);if(!as.length)return;
+  const t=as.reduce((s,a)=>s+(+a.price||0)*(+a.qty||1),0);g+=t;
+  html+=`<p style="margin-top:8px"><b>${esc(r.code)} · ${esc(r.name)}</b> (ผู้รับผิดชอบ: ${esc(r.owner)})</p>
+   <table>${TH}${tRows(as)}<tr><td colspan="6" style="text-align:right"><b>รวม</b></td>
+   <td style="text-align:right"><b>${money(t)}</b></td><td colspan="4"></td></tr></table>`;});
+ paper(html+`<p style="text-align:right;margin-top:8px"><b>มูลค่ารวมทั้งชั้น ${money(g)} บาท</b></p>${SIGN}`);}
+function printBld(bid){
+ let html=`${HEAD}<p><b>${esc(B(bid).name)}</b></p>`,g=0;
+ DB.floors.filter(f=>f.bid===bid).forEach(f=>{
+  const ids=DB.rooms.filter(r=>r.fid===f.id).map(r=>r.id);
+  const as=DB.assets.filter(a=>ids.includes(a.room));if(!as.length)return;
+  const t=as.reduce((s,a)=>s+(+a.price||0)*(+a.qty||1),0);g+=t;
+  html+=`<p style="margin-top:8px"><b>${esc(f.name)}</b></p><table>${TH}${tRows(as)}
+   <tr><td colspan="6" style="text-align:right"><b>รวมทั้งชั้น</b></td><td style="text-align:right"><b>${money(t)}</b></td><td colspan="4"></td></tr></table>`;});
+ paper(html+`<p style="text-align:right;margin-top:8px"><b>มูลค่ารวมทั้งอาคาร ${money(g)} บาท</b></p>${SIGN}`);}
+function printList(){
+ const rows=(window._rows||[]).map(x=>x.a);
+ const tot=rows.reduce((s,a)=>s+(+a.price||0)*(+a.qty||1),0);
+ paper(`${HEAD}<p><b>รายงานครุภัณฑ์ตามเงื่อนไขที่เลือก</b> (${rows.length} รายการ)</p>
+  <table>${TH}${tRows(rows)}<tr><td colspan="6" style="text-align:right"><b>รวม</b></td>
+  <td style="text-align:right"><b>${money(tot)}</b></td><td colspan="4"></td></tr></table>${SIGN}`);}
+function printTag(id){
+ const a=DB.assets.find(x=>x.id===id),r=RM(a.room);
+ const L=(k,v)=>`<tr><td style="width:35%"><b>${k}</b></td><td>${esc(v)||"-"}</td></tr>`;
+ mc();paper(`${HEAD}<h3><b>แบบแสดงรายละเอียดครุภัณฑ์รายชิ้น</b></h3>
+  ${a.img?`<div style="text-align:center;margin-bottom:8px"><img src="${IMG(a.img)}" style="max-height:170px"></div>`:""}
+  <table>${L("เลขครุภัณฑ์",a.no)}${L("ชื่อครุภัณฑ์",a.name)}${L("หมวดครุภัณฑ์",a.cat+" · "+(CT(a.cat).name||""))}
+  ${L("คุณลักษณะเฉพาะ",a.spec)}${L("ยี่ห้อ",a.brand)}${L("รุ่น/Model",a.model)}${L("Serial No.",a.sn)}
+  ${L("จำนวน",a.qty)}${L("ราคาต่อหน่วย",money(a.price)+" บาท")}${L("มูลค่ารวม",money((a.price||0)*(a.qty||1))+" บาท")}
+  ${L("บริษัทที่ซื้อ",a.vendor)}${L("วันที่ซื้อ/รับมอบ",a.buy)}${L("วันหมดประกัน",a.war)}${L("แหล่งงบประมาณ",a.budget)}
+  ${L("สถานที่ติดตั้ง",B(r.bid).name+" ชั้น "+FL(r.fid).no+" ห้อง "+r.code+" "+r.name)}
+  ${L("หน่วยงาน",DP(r.dept).name)}${L("ผู้รับผิดชอบ",a.owner)}${L("สถานะ",a.status)}
+  ${L("เอกสารแนบ",a.pdf?a.pdf.name:"-")}${L("หมายเหตุ",a.note)}</table>${SIGN}`);}
+
+/* ============================================================
+   ส่วนที่ 13 : ผู้ใช้ / Log / สำรองข้อมูล
+   ============================================================ */
+function vUser(){
+ view.innerHTML=`<div class="card noprint"><b>จัดการสมาชิกและสิทธิ์</b>
+  <button class="btn btn-sm" style="float:right" onclick="userForm()">+ เพิ่มผู้ใช้</button>
+  <div class="hint" style="margin-top:10px">
+   <b>ผู้ดูแลระบบสูงสุด</b> ทำได้ทุกอย่าง · <b>แอดมินอาคาร</b> จัดการทุกอย่างเฉพาะอาคารที่กำหนด (รวมผัง/ห้อง) ·
+   <b>แอดมินประเภทครุภัณฑ์</b> ดู/แก้/ลบเฉพาะหมวดที่รับผิดชอบ แต่ทำได้ทุกอาคาร ·
+   <b>หัวหน้าหน่วยงาน/ชั้น</b> จัดการครุภัณฑ์+ห้องในชั้นที่กำหนด · <b>เจ้าหน้าที่</b> เพิ่ม/แก้ได้ ลบไม่ได้ ·
+   <b>ผู้ดูข้อมูล</b> อ่านและพิมพ์เท่านั้น · เมนูจะแสดงเฉพาะที่สิทธิ์นั้นเข้าถึงได้</div></div>
+  <div class="card"><table><tr><th>อีเมล</th><th>ชื่อ</th><th>สิทธิ์</th><th>อาคาร</th><th>ชั้น</th><th>หมวดครุภัณฑ์</th><th></th></tr>
+  ${DB.users.map((u,i)=>`<tr><td>${esc(u.em)}</td><td>${esc(u.name)}</td><td><span class="chip">${ROLES[u.role]}</span></td>
+   <td>${u.scopeB.length?u.scopeB.map(x=>`<span class="chip g">${esc(B(x).code)}</span>`).join(" "):'<span class="chip y">ทุกอาคาร</span>'}</td>
+   <td>${u.scopeF.length?u.scopeF.map(x=>`<span class="chip g">${esc(FL(x).no)}</span>`).join(" "):'<span class="chip y">ทุกชั้น</span>'}</td>
+   <td>${u.scopeC.length?u.scopeC.map(x=>`<span class="chip p">${esc(x)}</span>`).join(" "):'<span class="chip y">ทุกหมวด</span>'}</td>
+   <td><button class="btn-s btn-sm" onclick="userForm(${i})">แก้</button>
+   ${u.em!==ME.em?`<button class="btn-r btn-sm" onclick="delUser(${i})">ลบ</button>`:""}</td></tr>`).join("")}</table></div>`;}
+function userForm(i){
+ const u=i!=null?DB.users[i]:{em:"",pw:"",name:"",role:"staff",scopeB:[],scopeF:[],scopeC:[]};
+ mo(`<h3>${i!=null?"แก้ไขผู้ใช้":"เพิ่มผู้ใช้"}</h3>
+  <div class="row g2"><div class="fld"><label>อีเมล (ใช้ล็อกอิน)</label><input id="u_em" type="email" value="${esc(u.em)}"></div>
+  <div class="fld"><label>รหัสผ่าน</label><input id="u_pw" value="${esc(u.pw)}"></div></div>
+  <div class="row g2"><div class="fld"><label>ชื่อ-สกุล / ตำแหน่ง</label><input id="u_nm" value="${esc(u.name)}"></div>
+  <div class="fld"><label>ระดับสิทธิ์</label><select id="u_rl">
+   ${Object.entries(ROLES).map(([k,v])=>`<option value="${k}" ${k===u.role?"selected":""}>${v}</option>`).join("")}</select></div></div>
+  <div class="fld"><label>ขอบเขตอาคาร (ไม่เลือก = ทุกอาคาร)</label>
+   <div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px;display:flex;flex-wrap:wrap;gap:10px">
+   ${DB.buildings.map(b=>`<label style="display:flex;gap:4px;align-items:center;font-size:13px;color:#334155">
+    <input type="checkbox" class="ub" value="${b.id}" style="width:auto" ${u.scopeB.includes(b.id)?"checked":""}> ${esc(b.code)}</label>`).join("")}</div></div>
+  <div class="fld"><label>ขอบเขตชั้น (ไม่เลือก = ทุกชั้น)</label>
+   <div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px;display:flex;flex-wrap:wrap;gap:10px;max-height:150px;overflow:auto">
+   ${DB.floors.map(f=>`<label style="display:flex;gap:4px;align-items:center;font-size:13px;color:#334155">
+    <input type="checkbox" class="uf" value="${f.id}" style="width:auto" ${u.scopeF.includes(f.id)?"checked":""}> ${esc(B(f.bid).code)}/${esc(f.no)}</label>`).join("")}</div></div>
+  <div class="fld"><label>ขอบเขตหมวดครุภัณฑ์ (สำหรับแอดมินประเภทครุภัณฑ์ · ไม่เลือก = ทุกหมวด)</label>
+   <div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px;display:flex;flex-wrap:wrap;gap:10px;max-height:150px;overflow:auto">
+   ${DB.cats.map(c=>`<label style="display:flex;gap:4px;align-items:center;font-size:13px;color:#334155">
+    <input type="checkbox" class="uc" value="${c.code}" style="width:auto" ${u.scopeC.includes(c.code)?"checked":""}> ${c.code} ${esc(c.name.slice(0,14))}</label>`).join("")}</div></div>
+  <div style="text-align:right"><button class="btn-s" onclick="mc()">ยกเลิก</button>
+  <button class="btn" onclick="saveUser(${i==null?-1:i})">บันทึก</button></div>`);}
+function saveUser(i){
+ const pick=c=>[...document.querySelectorAll("."+c+":checked")].map(x=>x.value);
+ const o={em:u_em.value.trim(),pw:u_pw.value,name:u_nm.value,role:u_rl.value,
+  scopeB:pick("ub"),scopeF:pick("uf"),scopeC:pick("uc")};
+ if(!o.em||!o.pw)return alert("กรอกอีเมลและรหัสผ่าน");
+ if(i>=0)DB.users[i]=o;else{if(DB.users.some(x=>x.em===o.em))return alert("อีเมลนี้มีอยู่แล้ว");DB.users.push(o);}
+ log("user","ตั้งค่าผู้ใช้ "+o.em+" ("+o.role+")");save();mc();vUser();}
+function delUser(i){if(!confirm("ลบผู้ใช้ "+DB.users[i].em+" ?"))return;
+ log("user","ลบผู้ใช้ "+DB.users[i].em);DB.users.splice(i,1);save();vUser();}
+function vLog(){
+ view.innerHTML=`<div class="card"><b>ประวัติการใช้งาน (Audit Log) — ${DB.logs.length} รายการ</b>
+  <button class="btn-s btn-sm noprint" style="float:right" onclick="expCsv('log')">ส่งออก CSV</button>
+  <table style="margin-top:10px"><tr><th>วัน-เวลา</th><th>ผู้ใช้</th><th>การกระทำ</th><th>รายละเอียด</th></tr>
+  ${DB.logs.slice(0,500).map(l=>`<tr><td>${new Date(l.t).toLocaleString("th-TH")}</td><td>${esc(l.u)}</td>
+   <td><span class="chip">${esc(l.act)}</span></td><td>${esc(l.detail)}</td></tr>`).join("")}</table></div>`;}
+function vData(){
+ const used=(new Blob([JSON.stringify(DB)]).size/1024/1024).toFixed(2);
+ const files=Object.keys(FC).length;
+ const fsz=(Object.values(FC).reduce((s,v)=>s+v.length,0)/1024/1024).toFixed(2);
+ view.innerHTML=`<div class="card"><b>สำรอง / นำเข้า / สถานะพื้นที่</b>
+  <p style="color:#64748b;font-size:12px;margin:8px 0">ข้อมูลข้อความใช้ไป ${used} MB (localStorage) ·
+   ไฟล์รูป/PDF ${files} ไฟล์ ≈ ${fsz} MB (IndexedDB) · แนะนำสำรองเป็นไฟล์ JSON ทุกครั้งหลังกรอกข้อมูลจำนวนมาก</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+   <button class="btn" onclick="expJson(false)">สำรองข้อมูล (JSON เฉพาะข้อความ · ไฟล์เล็ก)</button>
+   <button class="btn-g" onclick="expJson(true)">สำรองแบบเต็ม (รวมรูปและ PDF · ไฟล์ใหญ่)</button>
+   <button class="btn-s" onclick="expCsv('asset')">ส่งออกครุภัณฑ์ (CSV เปิดด้วย Excel)</button>
+   <button class="btn-s" onclick="imp.click()">นำเข้าไฟล์สำรอง</button>
+   ${isSuper()?`<button class="btn-r" onclick="if(confirm('ล้างข้อมูลทั้งหมดและเริ่มใหม่?')){localStorage.removeItem('${K}');indexedDB.deleteDatabase('hosp_asset_files');location.reload()}">รีเซ็ตระบบ</button>`:""}
+  </div><input type="file" id="imp" accept=".json" class="hidden"></div>`;
+ imp.onchange=e=>{const f=e.target.files[0];const r=new FileReader();
+  r.onload=async ev=>{try{const j=JSON.parse(ev.target.result);
+   if(j.files){for(const[k,v]of Object.entries(j.files)){const d=await idb();
+    d.transaction("f","readwrite").objectStore("f").put(v,k);FC[k]=v;}delete j.files;}
+   DB=j;save();alert("นำเข้าสำเร็จ");location.reload();}catch(x){alert("ไฟล์ไม่ถูกต้อง");}};
+  r.readAsText(f);};}
+function dl(n,c,t){const b=new Blob(["\ufeff"+c],{type:t});const u=URL.createObjectURL(b);
+ const a=document.createElement("a");a.href=u;a.download=n;a.click();URL.revokeObjectURL(u);}
+function expJson(full){
+ const o=JSON.parse(JSON.stringify(DB));if(full)o.files=FC;
+ dl("asset_backup_"+(full?"full_":"")+new Date().toISOString().slice(0,10)+".json",JSON.stringify(o),"application/json");
+ log("backup","สำรองข้อมูล"+(full?"แบบเต็ม":""));save();}
+function expCsv(kind){
+ let rows;
+ if(kind==="log")rows=[["วันเวลา","ผู้ใช้","การกระทำ","รายละเอียด"],
+  ...DB.logs.map(l=>[new Date(l.t).toLocaleString("th-TH"),l.u,l.act,l.detail])];
+ else{const src=(window._rows&&window._rows.length?window._rows:visAssets().map(a=>({a,r:RM(a.room)})));
+  rows=[["อาคาร","ชั้น","รหัสห้อง","ชื่อห้อง","หน่วยงาน","รหัสหมวด","ชื่อหมวด","เลขครุภัณฑ์","Serial","รายการ","คุณลักษณะ",
+   "ยี่ห้อ","รุ่น","จำนวน","ราคาต่อหน่วย","มูลค่ารวม","ผู้ขาย","วันที่ซื้อ","หมดประกัน","แหล่งงบ","ผู้รับผิดชอบ","สถานะ","หมายเหตุ","ไฟล์ PDF"],
+   ...src.map(({a,r})=>[B(r.bid).name,FL(r.fid).no,r.code,r.name,DP(r.dept).name,a.cat,CT(a.cat).name,a.no,a.sn,a.name,a.spec,
+    a.brand,a.model,a.qty,a.price,(+a.price||0)*(+a.qty||1),a.vendor,a.buy,a.war,a.budget,a.owner,a.status,a.note,a.pdf?a.pdf.name:""])];}
+ dl("export_"+kind+".csv",rows.map(r=>r.map(c=>`"${(c==null?"":String(c)).replace(/"/g,'""')}"`).join(",")).join("\n"),"text/csv;charset=utf-8");}
+
+/* ============================================================
+   ส่วนที่ 14 : Modal + เริ่มระบบ
+   ============================================================ */
+function mo(h){modal.innerHTML=`<div class="modal" onclick="if(event.target===this)mc()"><div class="box">${h}</div></div>`;}
+function mc(){modal.innerHTML="";}
+(async function boot(){
+ load();await loadFiles();
+ const s=sessionStorage.getItem("hosp_me");
+ if(s){const u=DB.users.find(x=>x.em===s);if(u){ME=u;start();}}
+})();
+</script>
+</body>
+</html>
