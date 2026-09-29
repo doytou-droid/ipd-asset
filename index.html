@@ -373,9 +373,61 @@ function vDash(){
     ||'<tr><td colspan=3 style="color:#94a3b8">ไม่มีรายการ</td></tr>'}</table></div></div>`;}
 
 /* ============================================================
-   ส่วนที่ 7 : ผังอาคาร + ปักหมุดห้อง
+   ส่วนที่ 7 : ผังอาคาร + ปักหมุดห้อง  (ฉบับแก้ไข v2)
    ============================================================ */
 let PL={bid:"",fid:"",pin:false,room:""};
+/* สิทธิ์ปักหมุด: ขยายให้หัวหน้าชั้นทำได้ในชั้นของตนเอง */
+function canPin(f){
+ if(!f||!f.id)return false;
+ if(RL()==="superadmin")return true;
+ if(RL()==="bldadmin")return inB(f.bid);
+ if(RL()==="manager")return inB(f.bid)&&inF(f.id);
+ return false;}
+/* ---------- ตัวอ่านไฟล์แบบแจ้งเตือนได้ (รองรับ PDF) ---------- */
+function loadPdfJs(){return new Promise((res,rej)=>{
+ if(window.pdfjsLib)return res(window.pdfjsLib);
+ const s=document.createElement("script");
+ s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+ s.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc=
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";res(window.pdfjsLib);};
+ s.onerror=()=>rej(new Error("โหลดตัวอ่าน PDF ไม่ได้ (ต้องเชื่อมอินเทอร์เน็ต)"));
+ document.head.appendChild(s);});}
+async function pdfToImg(file,max){
+ const lib=await loadPdfJs();
+ const pdf=await lib.getDocument({data:await file.arrayBuffer()}).promise;
+ const pg=await pdf.getPage(1);
+ let vp=pg.getViewport({scale:1});
+ vp=pg.getViewport({scale:Math.min(max/vp.width,max/vp.height,3)});
+ const c=document.createElement("canvas");c.width=vp.width;c.height=vp.height;
+ await pg.render({canvasContext:c.getContext("2d"),viewport:vp}).promise;
+ return c.toDataURL("image/jpeg",.8);}
+function shrink2(file,max,q){return new Promise((res,rej)=>{
+ const r=new FileReader();
+ r.onerror=()=>rej(new Error("อ่านไฟล์ไม่ได้"));
+ r.onload=e=>{const im=new Image();
+  im.onerror=()=>rej(new Error("เบราว์เซอร์เปิดไฟล์ภาพนี้ไม่ได้ (เช่น .HEIC จาก iPhone) กรุณาบันทึกเป็น JPG ก่อน"));
+  im.onload=()=>{let w=im.width,h=im.height;
+   if(w>max||h>max){const s=Math.min(max/w,max/h);w=Math.round(w*s);h=Math.round(h*s);}
+   const c=document.createElement("canvas");c.width=w;c.height=h;
+   c.getContext("2d").drawImage(im,0,0,w,h);res(c.toDataURL("image/jpeg",q));};
+  im.src=e.target.result;};
+ r.readAsDataURL(file);});}
+function pickImg(max,allowPdf){return new Promise(res=>{
+ const i=document.createElement("input");i.type="file";
+ i.accept=allowPdf?"image/*,application/pdf":"image/*";
+ i.onchange=async()=>{const f=i.files[0];if(!f)return res(null);
+  toast("กำลังประมวลผลไฟล์...");
+  try{res(f.type==="application/pdf"?await pdfToImg(f,max||1600):await shrink2(f,max||1600,.75));}
+  catch(e){alert("อัปโหลดไม่สำเร็จ\n\n"+e.message);res(null);}};
+ i.click();});}
+function toast(msg){
+ let t=document.getElementById("tst");
+ if(!t){t=document.createElement("div");t.id="tst";
+  t.style.cssText="position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 18px;border-radius:24px;font-size:13px;z-index:999;box-shadow:0 6px 20px rgba(0,0,0,.35)";
+  document.body.appendChild(t);}
+ t.textContent=msg;t.style.display="block";
+ clearTimeout(window._tt);window._tt=setTimeout(()=>t.style.display="none",2600);}
+/* ---------- หน้าผัง ---------- */
 function vPlan(){
  const bs=DB.buildings.filter(b=>inB(b.id));
  if(!bs.length){view.innerHTML='<div class="card">ยังไม่มีอาคาร กรุณาเพิ่มที่เมนูข้อมูลหลัก</div>';return;}
@@ -383,52 +435,69 @@ function vPlan(){
  const b=B(PL.bid),fls=DB.floors.filter(f=>f.bid===b.id&&inF(f.id));
  if(!fls.find(f=>f.id===PL.fid))PL.fid=fls[0]?fls[0].id:"";
  const f=FL(PL.fid),rms=DB.rooms.filter(r=>r.fid===PL.fid);
+ const able=canPin(f);
+ if(PL.pin&&!PL.room){const n=rms.find(r=>r.x==null);if(n)PL.room=n.id;}
  view.innerHTML=`<div class="card noprint"><div class="row g3">
-  <div><label>เลือกอาคาร</label><select onchange="PL.bid=this.value;PL.fid='';vPlan()">
+  <div><label>เลือกอาคาร</label><select onchange="PL.bid=this.value;PL.fid='';PL.room='';vPlan()">
    ${bs.map(x=>`<option value="${x.id}" ${x.id===b.id?"selected":""}>${esc(x.code)} — ${esc(x.name)}</option>`).join("")}</select></div>
-  <div><label>เลือกชั้น</label><select onchange="PL.fid=this.value;vPlan()">
+  <div><label>เลือกชั้น</label><select onchange="PL.fid=this.value;PL.room='';vPlan()">
    ${fls.map(x=>`<option value="${x.id}" ${x.id===PL.fid?"selected":""}>${esc(x.name)}</option>`).join("")}</select></div>
-  <div style="display:flex;align-items:flex-end;gap:6px">
-   ${canPlan(b.id)?`<button class="btn-s" onclick="upBldImg('${b.id}','img')">อัปโหลดภาพรวมอาคาร</button>
-   <button class="btn-s" onclick="upBldImg('${b.id}','plan')">อัปโหลดผังอาคาร</button>`:""}</div></div></div>
+  <div style="display:flex;align-items:flex-end;gap:6px;flex-wrap:wrap">
+   ${canPlan(b.id)?`<button class="btn-s btn-sm" onclick="upBldImg('${b.id}','img')">ภาพรวมอาคาร</button>
+   <button class="btn-s btn-sm" onclick="upBldImg('${b.id}','plan')">ผังอาคาร</button>`:""}</div></div></div>
  <div class="row g2">
   <div class="card"><h3 style="margin-bottom:8px">${esc(b.name)}</h3>
-   <p style="color:#64748b;font-size:12px">พื้นที่ ${esc(b.area)} · ${esc(b.beds)} · ${esc(b.note)}</p>
+   <p style="color:#64748b;font-size:12px">${esc(b.area)} · ${esc(b.beds)} · ${esc(b.note)}</p>
    ${b.img?`<img src="${IMG(b.img)}" style="max-width:100%;border-radius:8px;margin-top:8px">`:'<div class="hint" style="margin-top:8px">ยังไม่มีภาพรวมอาคาร</div>'}</div>
   <div class="card"><h3 style="margin-bottom:8px">ผังอาคาร (Site plan)</h3>
    ${b.plan?`<img src="${IMG(b.plan)}" style="max-width:100%;border-radius:8px">`:'<div class="hint">ยังไม่มีผังอาคาร</div>'}</div></div>
  <div class="card"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
    <h3>ผังชั้น: ${esc(f.name||"-")}</h3>
-   ${canPlan(b.id)?`<button class="btn-s btn-sm" onclick="upFloorImg('${PL.fid}','plan')">อัปโหลด/เปลี่ยนผังชั้น</button>
-    <button class="btn-s btn-sm" onclick="upFloorImg('${PL.fid}','img')">อัปโหลดภาพถ่ายชั้น</button>
-    <button class="${PL.pin?'btn-g':'btn'} btn-sm" onclick="PL.pin=!PL.pin;vPlan()">${PL.pin?"กำลังปักหมุด — คลิกบนผัง":"เปิดโหมดปักหมุดห้อง"}</button>`:""}
-   ${PL.pin?`<select style="width:auto" onchange="PL.room=this.value">
+   ${able?`<button class="btn-s btn-sm" onclick="upFloorImg('${PL.fid}','plan')">
+     ${f.plan?"เปลี่ยนผังชั้น":"① อัปโหลดผังชั้น (JPG/PNG/PDF)"}</button>
+    <button class="btn-s btn-sm" onclick="upFloorImg('${PL.fid}','img')">ภาพถ่ายชั้น</button>
+    ${f.plan?`<button class="${PL.pin?"btn-g":"btn"} btn-sm" onclick="PL.pin=!PL.pin;vPlan()">
+      ${PL.pin?"● กำลังปักหมุด (กดเพื่อหยุด)":"② เปิดโหมดปักหมุดห้อง"}</button>`:""}`
+   :'<span class="chip y">บัญชีนี้ไม่มีสิทธิ์แก้ผังชั้นนี้</span>'}
+   ${PL.pin&&f.plan?`<select style="width:auto;min-width:230px" onchange="PL.room=this.value">
      <option value="">— เลือกห้องที่จะปักหมุด —</option>
-     ${rms.map(r=>`<option value="${r.id}" ${r.id===PL.room?"selected":""}>${esc(r.code)} ${esc(r.name)}${r.x!=null?" (ปักแล้ว)":""}</option>`).join("")}</select>`:""}
+     ${rms.map(r=>`<option value="${r.id}" ${r.id===PL.room?"selected":""}>${esc(r.code)} ${esc(r.name)}${r.x!=null?" ✓ปักแล้ว":""}</option>`).join("")}</select>`:""}
   </div>
-  ${PL.pin?'<div class="hint" style="margin:8px 0">วิธีใช้: เลือกห้องจากรายการ แล้วคลิกตำแหน่งบนผังชั้น หมุดจะบันทึกทันที · คลิกหมุดสีเขียวเพื่อดูรายละเอียดห้อง</div>':""}
-  ${f.plan?`<div class="planwrap" id="pw" onclick="clickPlan(event)">
-    <img src="${IMG(f.plan)}">
-    ${rms.filter(r=>r.x!=null).map(r=>`<div class="pin ok" style="left:${r.x}%;top:${r.y}%" onclick="event.stopPropagation();roomView('${r.id}')">${esc(r.code)}</div>`).join("")}
-   </div>`:'<div class="hint" style="margin-top:8px">ยังไม่มีผังชั้นนี้ — อัปโหลดรูปผัง (JPG/PNG) แล้วจึงปักหมุดห้องได้</div>'}
-  ${f.img?`<div style="margin-top:10px"><b style="font-size:13px">ภาพถ่ายชั้น</b><br><img src="${IMG(f.img)}" style="max-width:100%;border-radius:8px;margin-top:6px"></div>`:""}
-  <div style="margin-top:10px;font-size:12px;color:#64748b">ห้องที่ยังไม่ได้ปักหมุด:
-   ${rms.filter(r=>r.x==null).map(r=>`<span class="chip y" style="cursor:pointer" onclick="roomView('${r.id}')">${esc(r.code)}</span>`).join(" ")||"ครบทุกห้องแล้ว"}</div></div>`;}
-async function upBldImg(id,key){const d=await pickImg();if(!d)return;const b=B(id);await dropFile(b[key]);
- b[key]=await putFile(d);log("plan","อัปเดตรูป "+key+" อาคาร "+b.code);save();vPlan();}
-async function upFloorImg(id,key){const d=await pickImg();if(!d)return;const f=FL(id);await dropFile(f[key]);
- f[key]=await putFile(d);log("plan","อัปเดตรูป "+key+" "+f.name);save();vPlan();}
-function pickImg(max){return new Promise(res=>{const i=document.createElement("input");i.type="file";i.accept="image/*";
- i.onchange=async()=>{const f=i.files[0];if(!f)return res(null);res(await shrink(f,max||1600,.75));};i.click();});}
+  ${PL.pin&&f.plan?`<div class="hint" style="margin:8px 0"><b>กำลังปักหมุด:</b>
+    ${PL.room?"<b style='color:#dc2626'>"+esc(RM(PL.room).code+" "+RM(PL.room).name)+"</b> — คลิกตำแหน่งบนผังได้เลย ระบบจะบันทึกทันทีและเลื่อนไปห้องถัดไปให้อัตโนมัติ":"กรุณาเลือกห้องจากช่องด้านบนก่อน"}</div>`:""}
+  ${f.plan?`<div class="planwrap" id="pw" style="${PL.pin?"cursor:crosshair;outline:3px dashed #059669;outline-offset:3px":""}"
+    onclick="clickPlan(event)">
+    <img src="${IMG(f.plan)}" draggable="false">
+    ${rms.filter(r=>r.x!=null).map(r=>`<div class="pin ok" style="left:${r.x}%;top:${r.y}%"
+      onclick="event.stopPropagation();${PL.pin?`if(confirm('ลบหมุดห้อง ${esc(r.code)} ?'))rmPin('${r.id}')`:`roomView('${r.id}')`}">${esc(r.code)}</div>`).join("")}
+   </div>`:'<div class="hint" style="margin-top:8px"><b>ยังไม่มีผังชั้นนี้</b> — ต้องกดปุ่ม ① อัปโหลดผังชั้นก่อน จึงจะปักหมุดได้ (รองรับ JPG, PNG และ PDF โดยระบบจะแปลงหน้าแรกของ PDF ให้อัตโนมัติ)</div>'}
+  ${f.img?`<div style="margin-top:10px"><b style="font-size:13px">ภาพถ่ายชั้น</b><br>
+   <img src="${IMG(f.img)}" style="max-width:100%;border-radius:8px;margin-top:6px"></div>`:""}
+  <div style="margin-top:10px;font-size:12px;color:#64748b">ห้องที่ยังไม่ได้ปักหมุด (${rms.filter(r=>r.x==null).length}):
+   ${rms.filter(r=>r.x==null).map(r=>`<span class="chip y" style="cursor:pointer"
+    onclick="${able&&f.plan?`PL.pin=true;PL.room='${r.id}';vPlan()`:`roomView('${r.id}')`}">${esc(r.code)}</span>`).join(" ")||"ครบทุกห้องแล้ว"}</div></div>`;}
+async function upBldImg(id,key){const d=await pickImg(1800,true);if(!d)return;
+ const b=B(id);await dropFile(b[key]);b[key]=await putFile(d);
+ log("plan","อัปเดตรูป "+key+" อาคาร "+b.code);save();vPlan();toast("อัปโหลดสำเร็จ");}
+async function upFloorImg(id,key){const d=await pickImg(1800,true);if(!d)return;
+ const f=FL(id);await dropFile(f[key]);f[key]=await putFile(d);
+ log("plan","อัปเดตรูป "+key+" "+f.name);save();vPlan();toast("อัปโหลดผังสำเร็จ — กดปุ่ม ② เพื่อเริ่มปักหมุด");}
 function clickPlan(e){
  if(!PL.pin)return;
- if(!PL.room)return alert("กรุณาเลือกห้องที่จะปักหมุดก่อน");
- const w=document.getElementById("pw").getBoundingClientRect();
+ if(!PL.room)return alert("กรุณาเลือกห้องที่จะปักหมุดจากช่องด้านบนก่อนครับ");
+ const img=document.querySelector("#pw img");if(!img)return;
+ const w=img.getBoundingClientRect();
+ let x=((e.clientX-w.left)/w.width)*100, y=((e.clientY-w.top)/w.height)*100;
+ x=Math.max(0,Math.min(100,x)); y=Math.max(0,Math.min(100,y));
  const r=RM(PL.room);
- r.x=+(((e.clientX-w.left)/w.width)*100).toFixed(2);
- r.y=+(((e.clientY-w.top)/w.height)*100).toFixed(2);
- log("pin","ปักหมุดห้อง "+r.code);save();vPlan();}
-
+ r.x=+x.toFixed(2); r.y=+y.toFixed(2);
+ log("pin","ปักหมุดห้อง "+r.code+" ที่ "+r.x+"%, "+r.y+"%");save();
+ const nx=DB.rooms.filter(z=>z.fid===PL.fid).find(z=>z.x==null);
+ PL.room=nx?nx.id:"";
+ vPlan();
+ toast(nx?("บันทึก "+r.code+" แล้ว → ห้องถัดไป: "+nx.code):"ปักหมุดครบทุกห้องในชั้นนี้แล้ว");}
+function rmPin(id){const r=RM(id);r.x=null;r.y=null;
+ log("pin","ลบหมุดห้อง "+r.code);save();vPlan();toast("ลบหมุด "+r.code+" แล้ว");}
 /* ============================================================
    ส่วนที่ 8 : มุมมองตามชั้น / หน่วยงาน / ครุภัณฑ์
    ============================================================ */
