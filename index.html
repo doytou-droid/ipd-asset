@@ -167,12 +167,12 @@ const MENU=[
  ["master","ข้อมูลหลัก",()=>canAnyMaster()],
  ["print","ฟอร์ม A4",()=>true],
  ["log","ประวัติการใช้งาน",()=>["superadmin","bldadmin","catadmin"].includes(RL())],
- ["user","ผู้ใช้งาน",()=>isSuper() || pv("room","a") || pv("room","e"),vUser],
+ ["user","ผู้ใช้งาน",()=>isSuper() || pv("room","a") || pv("room","e")],
  ["perm","สิทธิ์การเข้าถึง",()=>isSuper()],
  ["data","สำรองข้อมูล",()=>["superadmin","bldadmin"].includes(RL())]];
 
 /* ============================================================
-   ส่วนที่ 3 : ตัวช่วยรูป/PDF (เก็บ Base64 ลงใน Firestore โดยตรง)
+   ส่วนที่ 3 : ตัวช่วยรูป/PDF
    ============================================================ */
 function shrink(file,max=1280,q=.72){return new Promise((res,rej)=>{
  const r=new FileReader();r.onerror=()=>rej(new Error("อ่านไฟล์ไม่ได้"));
@@ -722,7 +722,7 @@ function vAsset(){
  const rows=fRows();
  const tot=rows.reduce((s,x)=>s+(+x.a.price||0)*(+x.a.qty||1),0);
  view.innerHTML=filterBar()+`<div class="card"><div style="margin-bottom:8px">พบ <b>${rows.length}</b> รายการ ·
-  รวม <b>${rows.reduce((s,x)=>s+(+x.a.qty||1),0)}</b> ชิ้น · มูลค่า <b>${money(tot)}</b> บาท</div>
+  รวม <b>${rows.reduce((s,x)=>s+(+a.qty||1),0)}</b> ชิ้น · มูลค่า <b>${money(tot)}</b> บาท</div>
   <table><tr><th>รูป</th><th>เลขครุภัณฑ์</th><th>รายการ</th><th>หมวด</th><th>อาคาร/ชั้น/ห้อง</th><th>ยี่ห้อ/รุ่น</th>
    <th>จน.</th><th>ราคา</th><th>วันที่ซื้อ</th><th>สถานะ</th><th class="noprint"></th></tr>
   ${rows.map(({a,r})=>`<tr>
@@ -1161,7 +1161,7 @@ function printTag(id){
   ${a.img?`<div style="text-align:center;margin-bottom:8px"><img src="${esc(a.img)}" style="max-height:170px"></div>`:""}
   <table>${L("เลขครุภัณฑ์",a.no)}${L("ชื่อครุภัณฑ์",a.name)}${L("หมวดครุภัณฑ์",a.cat+" · "+(CT(a.cat).name||""))}
   ${L("คุณลักษณะเฉพาะ",a.spec)}${L("ยี่ห้อ",a.brand)}${L("รุ่น/Model",a.model)}${L("Serial No.",a.sn)}
-  ${L("จำนวน",a.qty)}${L("ราคาต่อหน่วย",money(a.price)+" บาท")}${L("มูลค่ารวม",money((a.price||0)*(a.qty||1))+" บาท")}
+  ${L("จำนวน",a.qty)}${L("ราคาต่อหน่วย",money(a.price)+" บาท")}${L("มูลค่ารวม",money((a.price||0)*(+a.qty||1))+" บาท")}
   ${L("บริษัทที่ซื้อ",a.vendor)}${L("วันที่ซื้อ/รับมอบ",a.buy)}${L("วันหมดประกัน",a.war)}${L("แหล่งงบประมาณ",a.budget)}
   ${L("สถานที่ติดตั้ง",B(r.bid).name+" ชั้น "+FL(r.fid).no+" ห้อง "+r.code+" "+r.name)}
   ${L("หน่วยงานผู้รับผิดชอบ",DP(a.rdept).name)}${L("สถานะ",a.status)}
