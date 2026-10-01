@@ -71,6 +71,7 @@ img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px s
 .sp-tab{position:absolute;left:-30px;top:50%;transform:translateY(-50%);width:30px;height:64px;background:#1d4ed8;color:#fff;
  display:flex;align-items:center;justify-content:center;border-radius:10px 0 0 10px;cursor:pointer;font-size:15px;box-shadow:-3px 0 10px rgba(0,0,0,.2)}
 .sp-body{padding:16px;overflow:auto;width:100%;margin-top:50px}
+.bootmsg{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:999}
 @media print{body{background:#fff}header,nav,.noprint{display:none!important}main{padding:0;max-width:none}
  #a4{box-shadow:none;width:auto;padding:0;margin:0}@page{size:A4;margin:12mm}}
 @media(max-width:850px){.g2,.g3,.g4,.g5{grid-template-columns:1fr}}
@@ -99,7 +100,11 @@ img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px s
 
 <script>
 /* ============================================================
-   ส่วนที่ 1 : ตั้งค่า Firebase Config ของคุณ
+   ส่วนที่ 1 : ตั้งค่า Firebase Config
+   ⚠️ apiKey และ messagingSenderId ด้านล่างเป็น placeholder
+   กรุณาคัดลอกค่าจริงจาก Firebase Console > Project settings
+   (apiKey ขึ้นต้น AIzaSy... / messagingSenderId เป็นตัวเลขล้วน)
+   มาแทนที่ 2 บรรทัดที่มีคำว่า "ใส่ค่าจริงตรงนี้" เท่านั้น
    ============================================================ */
 const firebaseConfig = {
   apiKey: "AIzaSyAGu5BvQCUGE7C04C-TVtH-CiA56iTfF2M",
@@ -126,7 +131,8 @@ function authErrorMsg(e){
   "auth/wrong-password":"รหัสผ่านไม่ถูกต้อง",
   "auth/invalid-credential":"อีเมลหรือรหัสผ่านไม่ถูกต้อง",
   "auth/too-many-requests":"พยายามเข้าสู่ระบบผิดหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่",
-  "auth/network-request-failed":"เชื่อมต่ออินเทอร์เน็ตไม่ได้ กรุณาตรวจสอบสัญญาณ"};
+  "auth/network-request-failed":"เชื่อมต่ออินเทอร์เน็ตไม่ได้ กรุณาตรวจสอบสัญญาณ",
+  "auth/api-key-not-valid.-please-pass-a-valid-api-key.":"apiKey ใน Firebase Config ยังไม่ถูกต้อง กรุณาตรวจสอบค่าที่ใส่ไว้ในโค้ด"};
  return m[e.code]||(e.message||"เกิดข้อผิดพลาด กรุณาลองใหม่");}
 
 /* ============================================================
@@ -153,10 +159,10 @@ const ANGLES=["ป้ายหน้าห้อง/ทางเข้า","ภ�
  "ผนังตรงข้ามประตู","เพดาน (ไฟ/แอร์/สปริงเกอร์)","พื้น/ปลั๊กไฟ/หัวจ่ายก๊าซทางการแพทย์",
  "ห้องน้ำในห้อง","หน้าต่าง/ระเบียง","มุมอื่น ๆ"];
 const PRESET={
- "10":["เตียงผู้ป่วยไฟฟ้า 3 ไก","เตียงผู้ป่วยมือหมุน 2 ไก","เครื่องช่วยหายใจ (Ventilator)","เครื่องติดตามสัญญาณชีพ (Monitor)","เครื่องกระตุกหัวใจ (Defibrillator)","Infusion Pump","Syringe Pump","เครื่องดมยาสลบ","โคมไฟผ่าตัด","เตียงผ่าตัด","เครื่องจี้ไฟฟ้า","เครื่องนึ่งฆ่าเชื้อ (Autoclave)","ตู้อบเด็ก","รถเข็นนั่ง","รถเข็นนอน","เครื่องดูดเสมหะ","เครื่องวัดความดันอัตโนมัติ","ตู้เย็นเก็บเวชภัณฑ์","เครื่องปั่นเหวี่ยง","กล้องจุลทรรศน์","ตู้ชีวนิรภัย"],
- "01":["โต๊ะทำงาน","เก้าอี้สำนักงาน","ตู้เอกสารบานเลื่อน","ตู้ล็อกเกอร์","เคาน์เตอร์พยาบาล","เครื่องปรับอากาศ","เครื่องถ่ายเอกสาร","เครื่องทำลายเอกสาร"],
- "11":["คอมพิวเตอร์ตั้งโต๊ะ","คอมพิวเตอร์โน้ตบุ๊ก","เครื่องพิมพ์ Laser","เครื่องสำรองไฟ (UPS)","สแกนเนอร์","Access Point","Network Switch"],
- "04":["ตู้เย็น","เครื่องฟอกอากาศ","ชุดเครื่องเสียง","กล้องวงจรปิด","เครื่องกำเนิดไฟฟ้า"],
+ "10":["เตียงผู้ป่วยไฟฟ้า 3 ไก","เตียงผู้ป่วยมือหมุน 2 ไก","เครื่องช่วยหายใจ (Ventilator)","เครื่องติดตามสัญญาณชีพ (Monitor)","เครื่องกระตุกหัวใจ (Defibrillator)","Infusion Pump","Syringe Pump","เครื่องดมยาสลบ","โคมไฟผ่าตัด","เตียงผ่าตัด","เครื่องจี้ไฟฟ้า","เครื่องนึ่งฆ่าเชื้อ (Autoclave)","ตู้อบเด็ก","รถเข็นนั่ง","รถเข็นนอน","เครื่องดูดเสมหะ","เครื่องวัดความดันอัตโนมัติ","ตู้เย็นเก็บเวชภัณฑ์","เครื่องปั่นเหวี่ยง","กล้องจุลทรรศน์","ตู้ชีวนิรภัย","เครื่องตรวจคลื่นไฟฟ้าหัวใจ (EKG)","เครื่องอัลตราซาวด์"],
+ "01":["โต๊ะทำงาน","เก้าอี้สำนักงาน","ตู้เอกสารบานเลื่อน","ตู้ล็อกเกอร์","เคาน์เตอร์พยาบาล","เครื่องปรับอากาศ","เครื่องถ่ายเอกสาร","เครื่องทำลายเอกสาร","เก้าอี้พักคอยผู้ป่วย"],
+ "11":["คอมพิวเตอร์ตั้งโต๊ะ","คอมพิวเตอร์โน้ตบุ๊ก","เครื่องพิมพ์ Laser","เครื่องสำรองไฟ (UPS)","สแกนเนอร์","Access Point","Network Switch","เครื่องอ่านบัตรประชาชน"],
+ "04":["ตู้เย็น","เครื่องฟอกอากาศ","ชุดเครื่องเสียง","กล้องวงจรปิด","เครื่องกำเนิดไฟฟ้า","คิวเรียกคิวอัตโนมัติ"],
  "12":["ตู้แช่","เครื่องทำน้ำร้อน-น้ำเย็น","รถเข็นอาหาร","เครื่องซักผ้า"]};
 const MENU=[
  ["dash","ภาพรวม (Dashboard)",()=>true],
@@ -170,6 +176,8 @@ const MENU=[
  ["user","ผู้ใช้งาน",()=>isSuper() || pv("room","a") || pv("room","e")],
  ["perm","สิทธิ์การเข้าถึง",()=>isSuper()],
  ["data","สำรองข้อมูล",()=>["superadmin","bldadmin"].includes(RL())]];
+const VIEWS={dash:()=>vDash(),plan:()=>vPlan(),floor:()=>vFloor(),dept:()=>vDept(),asset:()=>vAsset(),
+ master:()=>vMaster(),print:()=>vPrint(),log:()=>vLog(),user:()=>vUser(),perm:()=>vPerm(),data:()=>vData()};
 
 /* ============================================================
    ส่วนที่ 3 : ตัวช่วยรูป/PDF
@@ -239,10 +247,15 @@ const RM=id=>DB.rooms.find(x=>x.id===id)||{};
 const DP=id=>DB.depts.find(x=>x.id===id)||{};
 const CT=c=>DB.cats.find(x=>x.code===c)||{};
 
+async function addDeptIfMissing(name){
+ const ex=DB.depts.find(d=>d.name===name)||(await dbf.collection("depts").where("name","==",name).limit(1).get()).docs[0];
+ if(ex)return ex.id||ex.id;
+ const r=await dbf.collection("depts").add({name,head:"-",tel:"-"});return r.id;}
+
 async function seedIfEmpty(){
  const chk=await dbf.collection("buildings").limit(1).get();
  if(!chk.empty)return;
- toast("กำลังเตรียมข้อมูลเริ่มต้น...");
+ toast("กำลังเตรียมข้อมูลเริ่มต้น (อาคาร IPD)...");
  const bRef=await dbf.collection("buildings").add({code:"IPD",name:"อาคารผู้ป่วยใน (IPD)",area:"26,241 ตร.ม.",
   beds:"193 เตียง",note:"OR 14 ห้อง / ICU 29 เตียง / VIP 49 ห้อง / จอดรถ 38 คัน",plan:"",img:""});
  const bid=bRef.id;
@@ -286,6 +299,89 @@ async function seedIfEmpty(){
  for(const [code,name] of cats)await dbf.collection("cats").doc(code).set({name,sys:true,note:""});
  for(const role of Object.keys(DEFAULT_PERMS))await dbf.collection("perms").doc(role).set(DEFAULT_PERMS[role]);
  toast("เตรียมข้อมูลเริ่มต้นเสร็จแล้ว");}
+
+/* ------------------------------------------------------------
+   เพิ่มอาคาร OPD โรงพยาบาลสุทธาเวช คณะแพทยศาสตร์ มมส.
+   อ้างอิง: th.wikipedia.org/wiki/โรงพยาบาลสุทธาเวช,
+            med.msu.ac.th/suddhavej/
+   หมายเหตุ: ผังรายชั้นเป็นโครงสร้างโดยประมาณจากคลินิกที่ให้บริการจริง
+   แก้ไขรายละเอียดเพิ่มเติมได้ที่เมนู "ข้อมูลหลัก"
+   ------------------------------------------------------------ */
+async function seedOPDIfMissing(){
+ const chk=await dbf.collection("buildings").where("code","==","OPD").limit(1).get();
+ if(!chk.empty)return;
+ toast("กำลังเพิ่มอาคาร OPD โรงพยาบาลสุทธาเวช...");
+ const bRef=await dbf.collection("buildings").add({
+  code:"OPD",
+  name:"อาคารผู้ป่วยนอก (OPD) โรงพยาบาลสุทธาเวช",
+  area:"อาคารสูง 6 ชั้น เชื่อมทางเดินกับอาคารโรงพยาบาล",
+  beds:"รองรับผู้ป่วยนอกเพิ่มได้ประมาณ 300 คน/วัน",
+  note:"คณะแพทยศาสตร์ มหาวิทยาลัยมหาสารคาม เลขที่ 79/99 ถ.นครสวรรค์ ต.ตลาด อ.เมือง จ.มหาสารคาม 44000 โทร. 043-021-021 เปิดให้บริการพร้อมอาคาร IPD เมื่อ 25 พ.ค. 2566 งบก่อสร้างประมาณ 300 ล้านบาท (อ้างอิง: วิกิพีเดีย, เว็บไซต์คณะแพทยศาสตร์ มมส.)",
+  plan:"",img:""});
+ const bid=bRef.id;
+ const addDept=async n=>{const r=await dbf.collection("depts").add({name:n,head:"-",tel:"-"});return r.id;};
+ const dReg=await addDept("งานเวชระเบียนและสถิติ"),
+  dER=await addDept("งานอุบัติเหตุและฉุกเฉิน (ER)"),
+  dFin=await addDept("งานการเงินและสิทธิการรักษา"),
+  dPhaOPD=await addDept("งานเภสัชกรรมผู้ป่วยนอก"),
+  dLabOPD=await addDept("งานเทคนิคการแพทย์ (LAB)"),
+  dXray=await addDept("งานรังสีวิทยา (X-Ray)"),
+  dMed=await addDept("กลุ่มงานอายุรกรรม"),
+  dSurg=await addDept("กลุ่มงานศัลยกรรม"),
+  dObgyn=await addDept("กลุ่มงานสูตินรีเวชกรรม"),
+  dPed=await addDept("กลุ่มงานกุมารเวชกรรม"),
+  dENT=await addDept("กลุ่มงานโสต ศอ นาสิก (ENT)"),
+  dEye=await addDept("กลุ่มงานจักษุวิทยา"),
+  dDent=await addDept("กลุ่มงานทันตกรรม"),
+  dRehab=await addDept("กลุ่มงานเวชศาสตร์ฟื้นฟู/แพทย์แผนไทยประยุกต์"),
+  dSMC=await addDept("ศูนย์คลินิกพิเศษเฉพาะทางนอกเวลา (SMC)"),
+  dAdmin=await addDept("งานบริหารจัดการอาคาร OPD");
+ const addFloor=async(no,name,dept)=>{const r=await dbf.collection("floors").add({bid,no,name,dept,plan:"",img:""});return r.id;};
+ const addRoom=async(fid,code,name,dept)=>dbf.collection("rooms").add({bid,fid,code,name,dept:dept||"",
+  owner:"-",tel:"",note:"",x:null,y:null,photos:[]});
+
+ const f1=await addFloor("1","ชั้น 1 — เวชระเบียน/ฉุกเฉิน/การเงิน/เภสัชกรรม",dReg);
+ await addRoom(f1,"OPD1-01","จุดประชาสัมพันธ์/เวชระเบียน",dReg);
+ await addRoom(f1,"OPD1-02","ห้องอุบัติเหตุและฉุกเฉิน (ER)",dER);
+ await addRoom(f1,"OPD1-03","ห้องการเงิน/สิทธิการรักษา",dFin);
+ await addRoom(f1,"OPD1-04","ห้องจ่ายยาผู้ป่วยนอก",dPhaOPD);
+ await addRoom(f1,"OPD1-05","ห้องเจาะเลือด/LAB",dLabOPD);
+ await addRoom(f1,"OPD1-06","ห้อง X-Ray ทั่วไป",dXray);
+
+ const f2=await addFloor("2","ชั้น 2 — คลินิกอายุรกรรม/ศัลยกรรม",dMed);
+ await addRoom(f2,"OPD2-01","คลินิกอายุรกรรมทั่วไป",dMed);
+ await addRoom(f2,"OPD2-02","คลินิกอายุรกรรมโรคไต",dMed);
+ await addRoom(f2,"OPD2-03","คลินิกอายุรกรรมโรคหัวใจ",dMed);
+ await addRoom(f2,"OPD2-04","คลินิกศัลยกรรมทั่วไป",dSurg);
+ await addRoom(f2,"OPD2-05","คลินิกศัลยกรรมกระดูกและข้อ",dSurg);
+ await addRoom(f2,"OPD2-NS","เคาน์เตอร์พยาบาลชั้น 2",dMed);
+
+ const f3=await addFloor("3","ชั้น 3 — สูตินรีเวชกรรม/กุมารเวชกรรม",dObgyn);
+ await addRoom(f3,"OPD3-01","คลินิกฝากครรภ์ (ANC)",dObgyn);
+ await addRoom(f3,"OPD3-02","คลินิกสูตินรีเวชกรรม",dObgyn);
+ await addRoom(f3,"OPD3-03","คลินิกกุมารเวชกรรมทั่วไป",dPed);
+ await addRoom(f3,"OPD3-04","คลินิกวัคซีน/สร้างเสริมภูมิคุ้มกัน",dPed);
+ await addRoom(f3,"OPD3-NS","เคาน์เตอร์พยาบาลชั้น 3",dObgyn);
+
+ const f4=await addFloor("4","ชั้น 4 — ENT/จักษุ/ทันตกรรม",dENT);
+ await addRoom(f4,"OPD4-01","คลินิกหู คอ จมูก (ENT)",dENT);
+ await addRoom(f4,"OPD4-02","คลินิกจักษุวิทยา (ตา)",dEye);
+ await addRoom(f4,"OPD4-03","คลินิกทันตกรรม 1",dDent);
+ await addRoom(f4,"OPD4-04","คลินิกทันตกรรม 2",dDent);
+ await addRoom(f4,"OPD4-NS","เคาน์เตอร์พยาบาลชั้น 4",dENT);
+
+ const f5=await addFloor("5","ชั้น 5 — เวชศาสตร์ฟื้นฟู/คลินิกพิเศษนอกเวลา",dRehab);
+ await addRoom(f5,"OPD5-01","ห้องกายภาพบำบัด",dRehab);
+ await addRoom(f5,"OPD5-02","ห้องแพทย์แผนไทยประยุกต์ (หัตถบำบัด/ประคบสมุนไพร)",dRehab);
+ await addRoom(f5,"OPD5-03","ศูนย์คลินิกพิเศษเฉพาะทางนอกเวลา (SMC)",dSMC);
+
+ const f6=await addFloor("6","ชั้น 6 — สำนักงาน/ห้องประชุมอาคาร OPD",dAdmin);
+ await addRoom(f6,"OPD6-01","ห้องประชุมอาคาร OPD",dAdmin);
+ await addRoom(f6,"OPD6-02","สำนักงานบริหารจัดการอาคาร",dAdmin);
+ await addRoom(f6,"OPD6-03","ห้องพักเจ้าหน้าที่",dAdmin);
+
+ log("master","เพิ่มอาคาร OPD โรงพยาบาลสุทธาเวชอัตโนมัติ (seed)");
+ toast("เพิ่มอาคาร OPD สำเร็จ");}
 
 async function loadAllOnce(){
  const [bld,flr,rm,dp,ct,as,us] = await Promise.all([
@@ -423,6 +519,7 @@ auth.onAuthStateChanged(async user=>{
  if(!emailValid(user.email)){alert("ระบบอนุญาตเฉพาะอีเมล "+EMAIL_DOMAIN+" เท่านั้น");await auth.signOut();return;}
  try{
   await seedIfEmpty();
+  await seedOPDIfMissing();
   let prof=null;
   for(let i=0;i<4;i++){
    const d=await dbf.collection("users").doc(user.uid).get();
@@ -448,9 +545,10 @@ function renderNav(){
  nav.innerHTML=MENU.filter(m=>m[2]()).map(m=>`<button class="${TAB===m[0]?'on':''}" onclick="go('${m[0]}')">${m[1]}</button>`).join("");}
 function go(t){
  if(typeof closeSidePanel==="function")closeSidePanel();
- const m=MENU.find(x=>x[0]===t);if(!m||!m[2]())t="dash";
+ const m=MENU.find(x=>x[0]===t);
+ if(!m||!m[2]())t="dash";
  TAB=t;renderNav();
- ({dash:vDash,plan:vPlan,floor:vFloor,dept:vDept,asset:vAsset,master:vMaster,print:vPrint,log:vLog,user:vUser,perm:vPerm,data:vData})[TAB]();}
+ if(VIEWS[TAB])VIEWS[TAB]();else VIEWS.dash();}
 
 /* ============================================================
    ส่วนที่ 7 : Dashboard + ฟิลเตอร์
@@ -721,8 +819,9 @@ function vDept(){
 function vAsset(){
  const rows=fRows();
  const tot=rows.reduce((s,x)=>s+(+x.a.price||0)*(+x.a.qty||1),0);
+ const qtyTot=rows.reduce((s,x)=>s+(+x.a.qty||1),0);
  view.innerHTML=filterBar()+`<div class="card"><div style="margin-bottom:8px">พบ <b>${rows.length}</b> รายการ ·
-  รวม <b>${rows.reduce((s,x)=>s+(+a.qty||1),0)}</b> ชิ้น · มูลค่า <b>${money(tot)}</b> บาท</div>
+  รวม <b>${qtyTot}</b> ชิ้น · มูลค่า <b>${money(tot)}</b> บาท</div>
   <table><tr><th>รูป</th><th>เลขครุภัณฑ์</th><th>รายการ</th><th>หมวด</th><th>อาคาร/ชั้น/ห้อง</th><th>ยี่ห้อ/รุ่น</th>
    <th>จน.</th><th>ราคา</th><th>วันที่ซื้อ</th><th>สถานะ</th><th class="noprint"></th></tr>
   ${rows.map(({a,r})=>`<tr>
