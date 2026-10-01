@@ -7,7 +7,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Sarabun","Segoe UI",Tahoma,sans-serif;background:#eef2f7;color:#1e293b;font-size:14px}
@@ -100,7 +99,7 @@ img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px s
 
 <script>
 /* ============================================================
-   ส่วนที่ 1 : ตั้งค่า Firebase — แก้ค่าในนี้ตามคู่มือการติดตั้ง
+   ส่วนที่ 1 : ตั้งค่า Firebase Config ของคุณ
    ============================================================ */
 const firebaseConfig = {
   apiKey: "AIzaSyAGu5BvQCUGE7C04C-TVtH-CiA56iTfF2M",
@@ -111,11 +110,10 @@ const firebaseConfig = {
   appId: "1:1050669049534:web:53d3a39b4360a001d720ef"
 };
 firebase.initializeApp(firebaseConfig);
-const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary"); // ใช้ตอนแอดมินสร้างผู้ใช้ใหม่ ไม่กระทบเซสชันแอดมิน
+const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
 const auth = firebase.auth();
 const secondaryAuth = secondaryApp.auth();
 const dbf = firebase.firestore();
-const storage = firebase.storage();
 dbf.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 
 const EMAIL_DOMAIN="@msu.ac.th";
@@ -174,32 +172,31 @@ const MENU=[
  ["data","สำรอง/นำเข้าข้อมูล",()=>["superadmin","bldadmin"].includes(RL())]];
 
 /* ============================================================
-   ส่วนที่ 3 : ตัวช่วยไฟล์ (Firebase Storage) + ย่อรูป/PDF
+   ส่วนที่ 3 : ตัวช่วยรูป/PDF (เก็บ Base64 ลงใน Firestore โดยตรง)
    ============================================================ */
 function shrink(file,max=1280,q=.72){return new Promise((res,rej)=>{
- const r=new FileReader();
- r.onerror=()=>rej(new Error("อ่านไฟล์ไม่ได้"));
+ const r=new FileReader();r.onerror=()=>rej(new Error("อ่านไฟล์ไม่ได้"));
  r.onload=e=>{const im=new Image();
-  im.onerror=()=>rej(new Error("เบราว์เซอร์เปิดไฟล์ภาพนี้ไม่ได้ (เช่น .HEIC จาก iPhone) กรุณาบันทึกเป็น JPG ก่อน"));
+  im.onerror=()=>rej(new Error("เบราว์เซอร์เปิดไฟล์ภาพนี้ไม่ได้ กรุณาบันทึกเป็น JPG ก่อน"));
   im.onload=()=>{let w=im.width,h=im.height;
    if(w>max||h>max){const s=Math.min(max/w,max/h);w=Math.round(w*s);h=Math.round(h*s);}
    const c=document.createElement("canvas");c.width=w;c.height=h;
    c.getContext("2d").drawImage(im,0,0,w,h);res(c.toDataURL("image/jpeg",q));};
   im.src=e.target.result;};
  r.readAsDataURL(file);});}
+function readAs(file){return new Promise((res,rej)=>{const r=new FileReader();
+ r.onerror=()=>rej(new Error("อ่านไฟล์ไม่ได้"));r.onload=e=>res(e.target.result);r.readAsDataURL(file);});}
 function loadPdfJs(){return new Promise((res,rej)=>{
  if(window.pdfjsLib)return res(window.pdfjsLib);
  const s=document.createElement("script");
  s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
  s.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc=
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";res(window.pdfjsLib);};
- s.onerror=()=>rej(new Error("โหลดตัวอ่าน PDF ไม่ได้ (ต้องเชื่อมอินเทอร์เน็ต)"));
- document.head.appendChild(s);});}
+ s.onerror=()=>rej(new Error("โหลดตัวอ่าน PDF ไม่ได้"));document.head.appendChild(s);});}
 async function pdfToImg(file,max){
  const lib=await loadPdfJs();
  const pdf=await lib.getDocument({data:await file.arrayBuffer()}).promise;
- const pg=await pdf.getPage(1);
- let vp=pg.getViewport({scale:1});
+ const pg=await pdf.getPage(1);let vp=pg.getViewport({scale:1});
  vp=pg.getViewport({scale:Math.min(max/vp.width,max/vp.height,3)});
  const c=document.createElement("canvas");c.width=vp.width;c.height=vp.height;
  await pg.render({canvasContext:c.getContext("2d"),viewport:vp}).promise;
@@ -208,13 +205,6 @@ function pickFile(allowPdf){return new Promise(res=>{
  const i=document.createElement("input");i.type="file";
  i.accept=allowPdf?"image/*,application/pdf":"image/*";
  i.onchange=()=>res(i.files[0]||null);i.click();});}
-async function uploadDataUrl(path,dataUrl){
- const ref=storage.ref(path);await ref.putString(dataUrl,"data_url");
- return {url:await ref.getDownloadURL(),path};}
-async function uploadRawFile(path,file){
- const ref=storage.ref(path);await ref.put(file);
- return {url:await ref.getDownloadURL(),path};}
-async function deleteStoragePath(path){if(!path)return;try{await storage.ref(path).delete();}catch(e){}}
 function toast(msg){
  let t=document.getElementById("tst");
  if(!t){t=document.createElement("div");t.id="tst";
@@ -228,10 +218,14 @@ function bigImgUrl(url){if(!url)return;
 function viewAssetImg(id){const a=DB.assets.find(x=>x.id===id);if(a)bigImgUrl(a.img);}
 function viewRoomPhoto(rid,idx){const r=RM(rid);const p=(r.photos||[])[idx];if(p)bigImgUrl(p.url);}
 function openAssetPdf(id){const a=DB.assets.find(x=>x.id===id);
- if(a&&a.pdf&&a.pdf.url)window.open(a.pdf.url,"_blank");else alert("ไม่พบไฟล์");}
+ if(a&&a.pdf&&a.pdf.dataUrl){
+  const[h,b]=a.pdf.dataUrl.split(",");const m=h.match(/:(.*?);/)[1];const s=atob(b);
+  const u=new Uint8Array(s.length);for(let k=0;k<s.length;k++)u[k]=s.charCodeAt(k);
+  window.open(URL.createObjectURL(new Blob([u],{type:m})),"_blank");
+ }else alert("ไม่พบไฟล์ PDF");}
 
 /* ============================================================
-   ส่วนที่ 4 : แคชข้อมูลในหน่วยความจำ + โหลดจาก Firestore + เรียลไทม์
+   ส่วนที่ 4 : แคชข้อมูล + ซิงค์กับ Firestore แบบเรียลไทม์
    ============================================================ */
 let DB={buildings:[],floors:[],rooms:[],depts:[],cats:[],assets:[],users:[],logs:[],perms:{}};
 let ME=null, TAB="dash", DIRTY=false, UNSUBS=[], rerenderTimer=null;
@@ -250,14 +244,14 @@ async function seedIfEmpty(){
  if(!chk.empty)return;
  toast("กำลังเตรียมข้อมูลเริ่มต้น...");
  const bRef=await dbf.collection("buildings").add({code:"IPD",name:"อาคารผู้ป่วยใน (IPD)",area:"26,241 ตร.ม.",
-  beds:"193 เตียง",note:"OR 14 ห้อง / ICU 29 เตียง / VIP 49 ห้อง / จอดรถ 38 คัน",plan:"",planPath:"",img:"",imgPath:""});
+  beds:"193 เตียง",note:"OR 14 ห้อง / ICU 29 เตียง / VIP 49 ห้อง / จอดรถ 38 คัน",plan:"",img:""});
  const bid=bRef.id;
  const addDept=async n=>{const r=await dbf.collection("depts").add({name:n,head:"-",tel:"-"});return r.id;};
  const dSys=await addDept("งานระบบอาคาร/ช่าง"),dPha=await addDept("กลุ่มงานเภสัชกรรม"),dFood=await addDept("งานโภชนาการ/ร้านค้า"),
   dCssd=await addDept("งานจ่ายกลางปราศจากเชื้อ (SCCD)"),dOr=await addDept("กลุ่มงานการพยาบาลผู้ป่วยผ่าตัด (OR)"),
   dIcu=await addDept("หอผู้ป่วยวิกฤต (ICU)"),dLab=await addDept("กลุ่มงานเทคนิคการแพทย์/พยาธิวิทยา"),
   dM=await addDept("หอผู้ป่วยสามัญชาย"),dF=await addDept("หอผู้ป่วยสามัญหญิง"),dMix=await addDept("หอผู้ป่วยสามัญรวม"),dVip=await addDept("หอผู้ป่วยพิเศษ (VIP)");
- const addFloor=async(no,name,dept)=>{const r=await dbf.collection("floors").add({bid,no,name,dept,plan:"",planPath:"",img:"",imgPath:""});return r.id;};
+ const addFloor=async(no,name,dept)=>{const r=await dbf.collection("floors").add({bid,no,name,dept,plan:"",img:""});return r.id;};
  const addRoom=async(fid,code,name,dept)=>dbf.collection("rooms").add({bid,fid,code,name,dept:dept||"",
   owner:"-",tel:"",note:"",x:null,y:null,photos:[]});
  const fG=await addFloor("G","ชั้น G — งานระบบอาคาร/ที่จอดรถ",dSys);
@@ -329,7 +323,7 @@ function detachListeners(){UNSUBS.forEach(u=>u());UNSUBS=[];}
 function scheduleRerender(){clearTimeout(rerenderTimer);rerenderTimer=setTimeout(()=>{if(ME)go(TAB);},200);}
 
 /* ============================================================
-   ส่วนที่ 5 : สิทธิ์การใช้งาน (เมทริกซ์อิสระ + ขอบเขต)
+   ส่วนที่ 5 : สิทธิ์การใช้งาน
    ============================================================ */
 const RL=()=>ME.role;
 const isSuper=()=>RL()==="superadmin";
@@ -409,7 +403,7 @@ async function submitFg(){
  if(!emailValid(em))return alert("กรุณาใช้อีเมลที่ลงท้ายด้วย "+EMAIL_DOMAIN);
  try{
   await auth.sendPasswordResetEmail(em);
-  alert("ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่อีเมลแล้ว กรุณาตรวจสอบกล่องจดหมาย (รวมถึง Junk/Spam) แล้วทำตามลิงก์ในอีเมล");
+  alert("ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่อีเมลแล้ว กรุณาตรวจสอบกล่องจดหมายแล้วทำตามลิงก์ในอีเมล");
   AUTHVIEW="login";renderAuth();
  }catch(e){alert(authErrorMsg(e));}}
 document.addEventListener("keydown",e=>{
@@ -593,23 +587,19 @@ function vPlan(){
 async function upBldImg(id,key){
  const file=await pickFile(true);if(!file)return;
  try{
-  toast("กำลังอัปโหลด...");
+  toast("กำลังประมวลผล...");
   const dataUrl=file.type==="application/pdf"?await pdfToImg(file,1800):await shrink(file,1800,.78);
-  const b=B(id);if(b[key+"Path"])await deleteStoragePath(b[key+"Path"]);
-  const path="buildings/"+id+"/"+key+"_"+Date.now()+".jpg";
-  const {url}=await uploadDataUrl(path,dataUrl);
-  await dbf.collection("buildings").doc(id).set({[key]:url,[key+"Path"]:path},{merge:true});
+  const b=B(id);
+  await dbf.collection("buildings").doc(id).set({[key]:dataUrl},{merge:true});
   log("plan","อัปเดตรูป "+key+" อาคาร "+b.code);toast("อัปโหลดสำเร็จ");
  }catch(e){alert("อัปโหลดไม่สำเร็จ\n\n"+e.message);}}
 async function upFloorImg(id,key){
  const file=await pickFile(true);if(!file)return;
  try{
-  toast("กำลังอัปโหลด...");
+  toast("กำลังประมวลผล...");
   const dataUrl=file.type==="application/pdf"?await pdfToImg(file,1800):await shrink(file,1800,.78);
-  const f=FL(id);if(f[key+"Path"])await deleteStoragePath(f[key+"Path"]);
-  const path="floors/"+id+"/"+key+"_"+Date.now()+".jpg";
-  const {url}=await uploadDataUrl(path,dataUrl);
-  await dbf.collection("floors").doc(id).set({[key]:url,[key+"Path"]:path},{merge:true});
+  const f=FL(id);
+  await dbf.collection("floors").doc(id).set({[key]:dataUrl},{merge:true});
   log("plan","อัปเดตรูป "+key+" "+f.name);toast(key==="plan"?"อัปโหลดผังสำเร็จ — กดปุ่ม ② เพื่อเริ่มปักหมุด":"อัปโหลดสำเร็จ");
  }catch(e){alert("อัปโหลดไม่สำเร็จ\n\n"+e.message);}}
 async function clickPlan(e){
@@ -689,7 +679,7 @@ function flList(){
    }).join("");
    if(!body)return"";
    const op=openFl[f.id]||DF.q||DF.c||DF.f;
-   return `<div class="floor ${op?"open":""}"><div class="hd" onclick="openFl['${f.id}']=!openFl['${f.id}'];flList()">
+   return `<div class="floor ${op?"open":''}"><div class="hd" onclick="openFl['${f.id}']=!openFl['${f.id}'];flList()">
     <b style="font-size:15px;color:#1e3a8a">${esc(f.name)}</b>
     <span style="color:#64748b">${esc(DP(f.dept).name||"")}</span>
     <span class="chip" style="margin-left:auto">${rms.length} ห้อง</span><span class="chip g">${cnt} ชิ้น</span>
@@ -707,7 +697,7 @@ function assetTable(as,r){
    <td>${a.qty||1}</td><td style="text-align:right">${money(a.price)}</td>
    <td><span class="chip ${a.status==="ใช้งานปกติ"?"g":a.status==="ชำรุด"?"r":"y"}">${esc(a.status)}</span></td>
    <td>${esc(DP(a.rdept).name)||"-"}</td>
-   <td>${a.pdf&&a.pdf.url?`<button class="btn-s btn-sm" onclick="openAssetPdf('${a.id}')">PDF</button>`:"—"}</td>
+   <td>${a.pdf&&a.pdf.dataUrl?`<button class="btn-s btn-sm" onclick="openAssetPdf('${a.id}')">PDF</button>`:"—"}</td>
    <td class="noprint" style="white-space:nowrap">
     <button class="btn-s btn-sm" onclick="assetView('${a.id}')">ดู</button>
     ${canAsset(r,a.cat,"e")?`<button class="btn-s btn-sm" onclick="assetForm('${r.id}','${a.id}')">แก้</button>`:""}
@@ -772,27 +762,24 @@ function roomView(id){
 async function addPhoto(id){
  const ang=ph_ang.value;const file=await pickFile(false);if(!file)return;
  try{
-  toast("กำลังอัปโหลด...");
-  const dataUrl=await shrink(file,1280,.75);
-  const path="rooms/"+id+"/photo_"+Date.now()+".jpg";
-  const {url}=await uploadDataUrl(path,dataUrl);
-  const r=RM(id);const photos=(r.photos||[]).concat([{angle:ang,url,path}]);
+  toast("กำลังประมวลผล...");
+  const url=await shrink(file,1280,.75);
+  const r=RM(id);const photos=(r.photos||[]).concat([{angle:ang,url}]);
   await dbf.collection("rooms").doc(id).set({photos},{merge:true});
   const idx=DB.rooms.findIndex(x=>x.id===id);if(idx>=0)DB.rooms[idx].photos=photos;
   log("photo","เพิ่มภาพห้อง "+r.code+" มุม "+ang);toast("เพิ่มรูปสำเร็จ");roomView(id);
  }catch(e){alert("อัปโหลดไม่สำเร็จ\n\n"+e.message);}}
 async function delPhoto(id,i){
  if(!confirm("ลบภาพนี้?"))return;
- const r=RM(id);const photos=(r.photos||[]).slice();const [removed]=photos.splice(i,1);
+ const r=RM(id);const photos=(r.photos||[]).slice();photos.splice(i,1);
  try{
   await dbf.collection("rooms").doc(id).set({photos},{merge:true});
-  if(removed)await deleteStoragePath(removed.path);
   const idx=DB.rooms.findIndex(x=>x.id===id);if(idx>=0)DB.rooms[idx].photos=photos;
   log("photo","ลบภาพห้อง "+r.code);roomView(id);
  }catch(e){alert("ลบไม่สำเร็จ: "+e.message);}}
 
 /* ============================================================
-   ส่วนที่ 11 : ฟอร์มครุภัณฑ์ (Storage + หน่วยงานผู้รับผิดชอบ + หมายเหตุหมวด)
+   ส่วนที่ 11 : ฟอร์มครุภัณฑ์
    ============================================================ */
 let TMP={};
 function assetForm(roomId,id){
@@ -800,7 +787,7 @@ function assetForm(roomId,id){
  const r=RM(a.room||roomId);
  const act=id?"e":"a";
  if(!canAsset(r,a.cat,act))return alert("คุณไม่มีสิทธิ์"+(id?"แก้ไข":"เพิ่ม")+"รายการนี้");
- TMP={imgFile:null,pdfFile:null,existingImg:a.img||"",existingPdfName:a.pdf?a.pdf.name:"",existingPdfSize:a.pdf?a.pdf.size:0};
+ TMP={imgData:a.img||"",pdfObj:a.pdf||null};
  const cats=DB.cats.filter(c=>pv("room","a")||pv("room","e")||((pv("cat","a")||pv("cat","e"))&&inC(c.code)));
  const rooms=visRooms();
  mo(`<h3>${id?"แก้ไขครุภัณฑ์":"เพิ่มครุภัณฑ์"} — ${esc(r.code)} ${esc(r.name)}</h3>
@@ -835,10 +822,10 @@ function assetForm(roomId,id){
  <div class="row g2">
   <div class="fld"><label>รูปภาพครุภัณฑ์ (ระบบย่อขนาดอัตโนมัติ)</label>
    <input type="file" accept="image/*" onchange="pickAssetImg(this)">
-   <img id="prev" src="${esc(TMP.existingImg)}" style="max-height:120px;border-radius:8px;margin-top:6px;${TMP.existingImg?"":"display:none"}"></div>
+   <img id="prev" src="${esc(TMP.imgData)}" style="max-height:120px;border-radius:8px;margin-top:6px;${TMP.imgData?"":"display:none"}"></div>
   <div class="fld"><label>ไฟล์ PDF คุณลักษณะเฉพาะ (ไม่บังคับ · ไม่เกิน 3 MB)</label>
    <input type="file" accept="application/pdf" onchange="pickPdf(this)">
-   <div id="pdfinfo" style="font-size:12px;color:#475569;margin-top:6px">${TMP.existingPdfName?esc(TMP.existingPdfName)+" ("+Math.round(TMP.existingPdfSize/1024)+" KB)":"ยังไม่มีไฟล์แนบ"}</div></div></div>
+   <div id="pdfinfo" style="font-size:12px;color:#475569;margin-top:6px">${TMP.pdfObj?esc(TMP.pdfObj.name)+" ("+Math.round(TMP.pdfObj.size/1024)+" KB)":"ยังไม่มีไฟล์แนบ"}</div></div></div>
  <div style="text-align:right;margin-top:12px"><button class="btn-s" onclick="mc()">ยกเลิก</button>
   <button class="btn-g" onclick="saveAsset('${id||""}')">บันทึกข้อมูล</button></div>`);
  fillPreset();}
@@ -846,39 +833,28 @@ function fillPreset(){
  dl_name.innerHTML=(PRESET[f_cat.value]||[]).map(n=>`<option>${n}</option>`).join("");
  const c=CT(f_cat.value);const h=document.getElementById("catHint");
  if(h)h.innerHTML=c.note?`<div class="hint" style="margin-bottom:10px">${esc(c.note)}</div>`:"";}
-function pickAssetImg(el){const f=el.files[0];if(!f)return;
- TMP.imgFile=f;const url=URL.createObjectURL(f);prev.src=url;prev.style.display="block";DIRTY=true;}
-function pickPdf(el){const f=el.files[0];if(!f)return;
+async function pickAssetImg(el){const f=el.files[0];if(!f)return;
+ try{toast("กำลังย่อรูป...");const d=await shrink(f,1280,.72);
+  TMP.imgData=d;prev.src=d;prev.style.display="block";DIRTY=true;toast("พร้อมบันทึก");}
+ catch(e){alert("อัปโหลดรูปไม่สำเร็จ\n\n"+e.message);}}
+async function pickPdf(el){const f=el.files[0];if(!f)return;
  if(f.size>3*1024*1024){alert("ไฟล์ใหญ่เกิน 3 MB กรุณาบีบอัดไฟล์ PDF ก่อน");el.value="";return;}
- TMP.pdfFile=f;pdfinfo.textContent=f.name+" ("+Math.round(f.size/1024)+" KB) พร้อมอัปโหลด";DIRTY=true;}
+ try{toast("กำลังอ่านไฟล์ PDF...");const d=await readAs(f);
+  TMP.pdfObj={dataUrl:d,name:f.name,size:f.size};
+  pdfinfo.textContent=f.name+" ("+Math.round(f.size/1024)+" KB) พร้อมบันทึก";DIRTY=true;toast("พร้อมบันทึก");}
+ catch(e){alert("อ่านไฟล์ PDF ไม่สำเร็จ");}}
 async function saveAsset(id){
- const room=RM(f_room.value);
- const act=id?"e":"a";
+ const room=RM(f_room.value);const act=id?"e":"a";
  if(!canAsset(room,f_cat.value,act))return alert("คุณไม่มีสิทธิ์บันทึกในขอบเขตนี้");
  if(!f_name.value.trim())return alert("กรุณาระบุชื่อครุภัณฑ์");
  const o={room:room.id,cat:f_cat.value,name:f_name.value.trim(),no:f_no.value,sn:f_sn.value,qty:+f_qty.value||1,
   brand:f_brand.value,model:f_model.value,price:+f_price.value||0,vendor:f_vendor.value,buy:f_buy.value,
-  war:f_war.value,rdept:f_rdept.value,status:f_st.value,budget:f_bud.value,spec:f_spec.value,note:f_note.value};
+  war:f_war.value,rdept:f_rdept.value,status:f_st.value,budget:f_bud.value,spec:f_spec.value,note:f_note.value,
+  img:TMP.imgData||"",pdf:TMP.pdfObj||null};
  try{
   toast("กำลังบันทึก...");
-  let assetId=id,prevAsset=id?DB.assets.find(x=>x.id===id):null;
   if(id){await dbf.collection("assets").doc(id).set(o,{merge:true});}
-  else{o.created=new Date().toISOString();o.by=ME.em;
-   const ref=await dbf.collection("assets").add(o);assetId=ref.id;o.id=assetId;DB.assets.push(o);}
-  if(TMP.imgFile){
-   if(prevAsset&&prevAsset.imgPath)await deleteStoragePath(prevAsset.imgPath);
-   const dataUrl=await shrink(TMP.imgFile,1280,.72);
-   const path="assets/"+assetId+"/image_"+Date.now()+".jpg";
-   const {url}=await uploadDataUrl(path,dataUrl);
-   await dbf.collection("assets").doc(assetId).set({img:url,imgPath:path},{merge:true});
-   const idx=DB.assets.findIndex(x=>x.id===assetId);if(idx>=0){DB.assets[idx].img=url;DB.assets[idx].imgPath=path;}}
-  if(TMP.pdfFile){
-   if(prevAsset&&prevAsset.pdf&&prevAsset.pdf.path)await deleteStoragePath(prevAsset.pdf.path);
-   const path="assets/"+assetId+"/spec_"+Date.now()+".pdf";
-   const {url}=await uploadRawFile(path,TMP.pdfFile);
-   const pdfObj={url,path,name:TMP.pdfFile.name,size:TMP.pdfFile.size};
-   await dbf.collection("assets").doc(assetId).set({pdf:pdfObj},{merge:true});
-   const idx=DB.assets.findIndex(x=>x.id===assetId);if(idx>=0)DB.assets[idx].pdf=pdfObj;}
+  else{o.created=new Date().toISOString();o.by=ME.em;const ref=await dbf.collection("assets").add(o);o.id=ref.id;DB.assets.push(o);}
   log(id?"edit_asset":"add_asset",(id?"แก้ไข ":"เพิ่ม ")+o.name+" x"+o.qty);
   TMP={};DIRTY=false;mc();go(TAB);toast("บันทึกสำเร็จ");
  }catch(e){alert("บันทึกไม่สำเร็จ\n\n"+e.message);}}
@@ -886,13 +862,8 @@ async function delAsset(id){
  const a=DB.assets.find(x=>x.id===id),r=RM(a.room);
  if(!canAsset(r,a.cat,"d"))return alert("ไม่มีสิทธิ์ลบ");
  if(!confirm("ยืนยันลบ "+a.name+" ?"))return;
- try{
-  await dbf.collection("assets").doc(id).delete();
-  if(a.imgPath)await deleteStoragePath(a.imgPath);
-  if(a.pdf&&a.pdf.path)await deleteStoragePath(a.pdf.path);
-  DB.assets=DB.assets.filter(x=>x.id!==id);
-  log("del_asset","ลบ "+a.name+" ("+a.no+")");go(TAB);
- }catch(e){alert("ลบไม่สำเร็จ: "+e.message);}}
+ try{await dbf.collection("assets").doc(id).delete();DB.assets=DB.assets.filter(x=>x.id!==id);
+  log("del_asset","ลบ "+a.name+" ("+a.no+")");go(TAB);}catch(e){alert("ลบไม่สำเร็จ: "+e.message);}}
 function assetView(id){
  const a=DB.assets.find(x=>x.id===id),r=RM(a.room);
  const L=(k,v)=>`<tr><td style="width:170px;color:#64748b">${k}</td><td><b>${esc(v)||"-"}</b></td></tr>`;
@@ -904,7 +875,7 @@ function assetView(id){
   ${L("มูลค่ารวม",money((a.price||0)*(a.qty||1))+" บาท")}${L("บริษัทที่ซื้อ",a.vendor)}${L("วันที่ซื้อ",a.buy)}
   ${L("หมดประกัน",a.war)}${L("แหล่งงบประมาณ",a.budget)}${L("หน่วยงานผู้รับผิดชอบ",DP(a.rdept).name)}${L("สถานะ",a.status)}
   ${L("คุณลักษณะ",a.spec)}${L("หมายเหตุ",a.note)}${L("บันทึกโดย",a.by)}</table>
-  ${a.pdf&&a.pdf.url?`<p style="margin-top:10px"><button class="btn" onclick="openAssetPdf('${a.id}')">เปิดไฟล์ PDF คุณลักษณะ (${esc(a.pdf.name)})</button></p>`:""}
+  ${a.pdf&&a.pdf.dataUrl?`<p style="margin-top:10px"><button class="btn" onclick="openAssetPdf('${a.id}')">เปิดไฟล์ PDF คุณลักษณะ (${esc(a.pdf.name)})</button></p>`:""}
   <div style="text-align:right;margin-top:12px"><button class="btn-s" onclick="printTag('${a.id}')">ฟอร์ม A4 รายชิ้น</button>
   <button class="btn" onclick="mc()">ปิด</button></div>`);}
 
@@ -1027,11 +998,8 @@ async function saveRm(id){
 async function delRm(id){
  if(DB.assets.some(a=>a.room===id))return alert("ลบไม่ได้ — ยังมีครุภัณฑ์อยู่ในห้องนี้");
  if(!confirm("ยืนยันลบห้อง?"))return;
- try{
-  const r=RM(id);for(const p of (r.photos||[]))await deleteStoragePath(p.path);
-  await dbf.collection("rooms").doc(id).delete();DB.rooms=DB.rooms.filter(x=>x.id!==id);
-  log("master","ลบห้อง "+r.code);vMaster();
- }catch(e){alert("ลบไม่สำเร็จ: "+e.message);}}
+ try{await dbf.collection("rooms").doc(id).delete();DB.rooms=DB.rooms.filter(x=>x.id!==id);
+  log("master","ลบห้อง "+RM(id).code);vMaster();}catch(e){alert("ลบไม่สำเร็จ: "+e.message);}}
 function bulkRoom(){
  mo(`<h3>เพิ่มห้องหลายห้องอัตโนมัติ</h3>
   <div class="row g2"><div class="fld"><label>อาคาร</label><select id="k_b" onchange="kFlr()">
@@ -1200,14 +1168,13 @@ function printTag(id){
   ${L("เอกสารแนบ",a.pdf?a.pdf.name:"-")}${L("หมายเหตุ",a.note)}</table>${SIGN}`);}
 
 /* ============================================================
-   ส่วนที่ 14 : ผู้ใช้งาน / เมทริกซ์สิทธิ์ (admin สร้างผู้ใช้ด้วย Secondary App)
+   ส่วนที่ 14 : ผู้ใช้งาน / สิทธิ์
    ============================================================ */
 function vUser(){
  const pend=DB.users.filter(u=>u.pending);
  view.innerHTML=`<div class="card noprint"><b>จัดการสมาชิกและขอบเขต</b>
   <button class="btn btn-sm" style="float:right" onclick="userForm()">+ เพิ่มผู้ใช้</button>
-  <div class="hint" style="margin-top:10px">หน้านี้กำหนด "ระดับสิทธิ์" และ "ขอบเขต" ของผู้ใช้แต่ละคน
-   ส่วน "ทำอะไรได้บ้าง" ของแต่ละระดับสิทธิ์ ตั้งค่าที่เมนู "สิทธิ์การเข้าถึง"</div></div>
+  <div class="hint" style="margin-top:10px">หน้านี้กำหนด "ระดับสิทธิ์" และ "ขอบเขต" ของผู้ใช้แต่ละคน</div></div>
   ${pend.length?`<div class="card" style="border-left:4px solid #d97706">
    <b style="color:#92400e">สมาชิกสมัครใหม่รอตรวจสอบ (${pend.length})</b>
    <table style="margin-top:8px"><tr><th>อีเมล</th><th>ชื่อ-สกุล</th><th>ตำแหน่ง</th><th>สังกัด</th><th></th></tr>
@@ -1226,7 +1193,7 @@ function userForm(i){
  const u=i!=null?DB.users[i]:null;
  mo(`<h3>${u?"แก้ไขผู้ใช้":"เพิ่มผู้ใช้ใหม่"}</h3>
   <div class="row g2"><div class="fld"><label>อีเมล (ต้องลงท้าย ${EMAIL_DOMAIN})</label><input id="u_em" type="email" value="${esc(u?u.em:"")}" ${u?"disabled":""}></div>
-  <div class="fld"><label>รหัสผ่าน ${u?"(เว้นว่าง = ไม่เปลี่ยน — ต้องให้ผู้ใช้รีเซ็ตเองถ้าลืม)":"(อย่างน้อย 6 ตัว)"}</label><input id="u_pw" type="password" value=""></div></div>
+  <div class="fld"><label>รหัสผ่าน ${u?"(เว้นว่าง = ไม่เปลี่ยน)":"(อย่างน้อย 6 ตัว)"}</label><input id="u_pw" type="password" value=""></div></div>
   <div class="row g3"><div class="fld"><label>ชื่อ-สกุล</label><input id="u_nm" value="${esc(u?u.name:"")}"></div>
   <div class="fld"><label>ตำแหน่ง</label><input id="u_pos" value="${esc(u?u.pos:"")}"></div>
   <div class="fld"><label>เบอร์ติดต่อภายใน</label><input id="u_tel" value="${esc(u?u.tel:"")}"></div></div>
@@ -1257,10 +1224,8 @@ async function saveUser(i){
   scopeB=pick("ub"),scopeF=pick("uf"),scopeC=pick("uc");
  try{
   if(i>=0){
-   const existing=DB.users[i];
-   const o={name,pos,dept,tel,role,scopeB,scopeF,scopeC};
-   await dbf.collection("users").doc(existing.id).set(o,{merge:true});
-   Object.assign(existing,o);
+   const existing=DB.users[i];const o={name,pos,dept,tel,role,scopeB,scopeF,scopeC};
+   await dbf.collection("users").doc(existing.id).set(o,{merge:true});Object.assign(existing,o);
    log("user","แก้ไขผู้ใช้ "+existing.em);
   }else{
    const em=u_em.value.trim().toLowerCase(),pw=u_pw.value;
@@ -1270,19 +1235,17 @@ async function saveUser(i){
    const cred=await secondaryAuth.createUserWithEmailAndPassword(em,pw);
    const o={em,name,pos,dept,tel,role,scopeB,scopeF,scopeC,pending:false};
    await dbf.collection("users").doc(cred.user.uid).set(o);
-   await secondaryAuth.signOut();
-   o.id=cred.user.uid;DB.users.push(o);
+   await secondaryAuth.signOut();o.id=cred.user.uid;DB.users.push(o);
    log("user","เพิ่มผู้ใช้ "+em+" ("+role+")");
   }
   DIRTY=false;mc();vUser();toast("บันทึกสำเร็จ");
  }catch(e){alert(authErrorMsg(e));}}
 async function approveUser(i){
- const u=DB.users[i];
- try{await dbf.collection("users").doc(u.id).set({pending:false},{merge:true});u.pending=false;
+ const u=DB.users[i];try{await dbf.collection("users").doc(u.id).set({pending:false},{merge:true});u.pending=false;
   log("user","ตรวจสอบสมาชิกใหม่ "+u.em);mc();vUser();}catch(e){alert("ไม่สำเร็จ: "+e.message);}}
 async function delUser(i){
  const u=DB.users[i];
- if(!confirm("ลบผู้ใช้ "+u.em+" ?\n\n(หมายเหตุ: ลบได้เฉพาะข้อมูลโปรไฟล์ ส่วนบัญชีล็อกอินจริงต้องลบเพิ่มที่ Firebase Console > Authentication)"))return;
+ if(!confirm("ลบผู้ใช้ "+u.em+" ?"))return;
  try{await dbf.collection("users").doc(u.id).delete();DB.users.splice(i,1);
   log("user","ลบผู้ใช้ "+u.em);vUser();}catch(e){alert("ลบไม่สำเร็จ: "+e.message);}}
 
@@ -1290,7 +1253,7 @@ let PT="bldadmin";
 function vPerm(){
  if(!isSuper()){view.innerHTML='<div class="card">เฉพาะผู้ดูแลระบบสูงสุดเท่านั้น</div>';return;}
  view.innerHTML=`<div class="card"><b>ตั้งค่าสิทธิ์การเข้าถึงตามระดับผู้ใช้งาน</b>
-  <div class="hint" style="margin:10px 0">เลือกระดับสิทธิ์ที่ต้องการตั้งค่า แล้วติ๊กถูกช่องที่อนุญาต — ถ้าไม่ติ๊ก แปลว่าทำสิ่งนั้นไม่ได้เลยในทรัพยากรนั้น</div>
+  <div class="hint" style="margin:10px 0">เลือกระดับสิทธิ์ที่ต้องการตั้งค่า แล้วติ๊กถูกช่องที่อนุญาต</div>
   <div class="tabs">${Object.keys(ROLES).filter(r=>r!=="superadmin").map(r=>`<button class="${PT===r?"on":""}" onclick="PT='${r}';vPerm()">${ROLES[r]}</button>`).join("")}</div>
   <table><tr><th>ทรัพยากร</th>${ACT.map(a=>`<th style="text-align:center">${a[1]}</th>`).join("")}</tr>
   ${RES.map(r=>`<tr><td><b>${r[1]}</b></td>${ACT.map(a=>`<td style="text-align:center">
@@ -1322,8 +1285,7 @@ function vLog(){
    <td><span class="chip">${esc(l.act)}</span></td><td>${esc(l.detail)}</td></tr>`).join("")}</table></div>`;}
 function vData(){
  view.innerHTML=`<div class="card"><b>สำรอง / นำเข้าข้อมูล</b>
-  <p style="color:#64748b;font-size:12px;margin:8px 0">ข้อมูลหลักและไฟล์ทั้งหมดเก็บอยู่บน Firebase Cloud แล้ว (ดูปริมาณการใช้พื้นที่ได้ที่ Firebase Console → Firestore/Storage → Usage)
-   ปุ่มด้านล่างใช้สำรองข้อมูลเป็นไฟล์ JSON ไว้เผื่อฉุกเฉินเท่านั้น</p>
+  <p style="color:#64748b;font-size:12px;margin:8px 0">ข้อมูลหลักเก็บอยู่บน Firebase Cloud แล้ว ปุ่มด้านล่างใช้สำรองข้อมูลเป็นไฟล์ JSON ไว้เผื่อฉุกเฉิน</p>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
    <button class="btn" onclick="expJson()">สำรองข้อมูลปัจจุบัน (JSON)</button>
    <button class="btn-s" onclick="expCsv('asset')">ส่งออกครุภัณฑ์ (CSV เปิดด้วย Excel)</button>
