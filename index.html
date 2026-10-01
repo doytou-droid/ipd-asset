@@ -167,7 +167,7 @@ const MENU=[
  ["master","ข้อมูลหลัก",()=>canAnyMaster()],
  ["print","ฟอร์ม A4",()=>true],
  ["log","ประวัติการใช้งาน",()=>["superadmin","bldadmin","catadmin"].includes(RL())],
- ["user","ผู้ใช้งาน",()=>isSuper() || pv("room","a") || pv("room","e")],
+ ["user","ผู้ใช้งาน",()=>isSuper() || pv("room","a") || pv("room","e"),vUser],
  ["perm","สิทธิ์การเข้าถึง",()=>isSuper()],
  ["data","สำรองข้อมูล",()=>["superadmin","bldadmin"].includes(RL())]];
 
