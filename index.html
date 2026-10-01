@@ -71,7 +71,6 @@ img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px s
 .sp-tab{position:absolute;left:-30px;top:50%;transform:translateY(-50%);width:30px;height:64px;background:#1d4ed8;color:#fff;
  display:flex;align-items:center;justify-content:center;border-radius:10px 0 0 10px;cursor:pointer;font-size:15px;box-shadow:-3px 0 10px rgba(0,0,0,.2)}
 .sp-body{padding:16px;overflow:auto;width:100%;margin-top:50px}
-.bootmsg{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:8px 16px;border-radius:20px;font-size:12px;z-index:999}
 @media print{body{background:#fff}header,nav,.noprint{display:none!important}main{padding:0;max-width:none}
  #a4{box-shadow:none;width:auto;padding:0;margin:0}@page{size:A4;margin:12mm}}
 @media(max-width:850px){.g2,.g3,.g4,.g5{grid-template-columns:1fr}}
@@ -101,10 +100,6 @@ img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px s
 <script>
 /* ============================================================
    ส่วนที่ 1 : ตั้งค่า Firebase Config
-   ⚠️ apiKey และ messagingSenderId ด้านล่างเป็น placeholder
-   กรุณาคัดลอกค่าจริงจาก Firebase Console > Project settings
-   (apiKey ขึ้นต้น AIzaSy... / messagingSenderId เป็นตัวเลขล้วน)
-   มาแทนที่ 2 บรรทัดที่มีคำว่า "ใส่ค่าจริงตรงนี้" เท่านั้น
    ============================================================ */
 const firebaseConfig = {
   apiKey: "AIzaSyAGu5BvQCUGE7C04C-TVtH-CiA56iTfF2M",
@@ -132,7 +127,7 @@ function authErrorMsg(e){
   "auth/invalid-credential":"อีเมลหรือรหัสผ่านไม่ถูกต้อง",
   "auth/too-many-requests":"พยายามเข้าสู่ระบบผิดหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่",
   "auth/network-request-failed":"เชื่อมต่ออินเทอร์เน็ตไม่ได้ กรุณาตรวจสอบสัญญาณ",
-  "auth/api-key-not-valid.-please-pass-a-valid-api-key.":"apiKey ใน Firebase Config ยังไม่ถูกต้อง กรุณาตรวจสอบค่าที่ใส่ไว้ในโค้ด"};
+  "auth/api-key-not-valid.-please-pass-a-valid-api-key.":"apiKey ใน Firebase Config ยังไม่ถูกต้อง"};
  return m[e.code]||(e.message||"เกิดข้อผิดพลาด กรุณาลองใหม่");}
 
 /* ============================================================
@@ -247,11 +242,6 @@ const RM=id=>DB.rooms.find(x=>x.id===id)||{};
 const DP=id=>DB.depts.find(x=>x.id===id)||{};
 const CT=c=>DB.cats.find(x=>x.code===c)||{};
 
-async function addDeptIfMissing(name){
- const ex=DB.depts.find(d=>d.name===name)||(await dbf.collection("depts").where("name","==",name).limit(1).get()).docs[0];
- if(ex)return ex.id||ex.id;
- const r=await dbf.collection("depts").add({name,head:"-",tel:"-"});return r.id;}
-
 async function seedIfEmpty(){
  const chk=await dbf.collection("buildings").limit(1).get();
  if(!chk.empty)return;
@@ -300,13 +290,6 @@ async function seedIfEmpty(){
  for(const role of Object.keys(DEFAULT_PERMS))await dbf.collection("perms").doc(role).set(DEFAULT_PERMS[role]);
  toast("เตรียมข้อมูลเริ่มต้นเสร็จแล้ว");}
 
-/* ------------------------------------------------------------
-   เพิ่มอาคาร OPD โรงพยาบาลสุทธาเวช คณะแพทยศาสตร์ มมส.
-   อ้างอิง: th.wikipedia.org/wiki/โรงพยาบาลสุทธาเวช,
-            med.msu.ac.th/suddhavej/
-   หมายเหตุ: ผังรายชั้นเป็นโครงสร้างโดยประมาณจากคลินิกที่ให้บริการจริง
-   แก้ไขรายละเอียดเพิ่มเติมได้ที่เมนู "ข้อมูลหลัก"
-   ------------------------------------------------------------ */
 async function seedOPDIfMissing(){
  const chk=await dbf.collection("buildings").where("code","==","OPD").limit(1).get();
  if(!chk.empty)return;
@@ -316,7 +299,7 @@ async function seedOPDIfMissing(){
   name:"อาคารผู้ป่วยนอก (OPD) โรงพยาบาลสุทธาเวช",
   area:"อาคารสูง 6 ชั้น เชื่อมทางเดินกับอาคารโรงพยาบาล",
   beds:"รองรับผู้ป่วยนอกเพิ่มได้ประมาณ 300 คน/วัน",
-  note:"คณะแพทยศาสตร์ มหาวิทยาลัยมหาสารคาม เลขที่ 79/99 ถ.นครสวรรค์ ต.ตลาด อ.เมือง จ.มหาสารคาม 44000 โทร. 043-021-021 เปิดให้บริการพร้อมอาคาร IPD เมื่อ 25 พ.ค. 2566 งบก่อสร้างประมาณ 300 ล้านบาท (อ้างอิง: วิกิพีเดีย, เว็บไซต์คณะแพทยศาสตร์ มมส.)",
+  note:"คณะแพทยศาสตร์ มหาวิทยาลัยมหาสารคาม เลขที่ 79/99 ถ.นครสวรรค์ ต.ตลาด อ.เมือง จ.มหาสารคาม 44000 โทร. 043-021-021 เปิดให้บริการพร้อมอาคาร IPD เมื่อ 25 พ.ค. 2566 (อ้างอิง: วิกิพีเดีย, เว็บไซต์คณะแพทยศาสตร์ มมส.)",
   plan:"",img:""});
  const bid=bRef.id;
  const addDept=async n=>{const r=await dbf.collection("depts").add({name:n,head:"-",tel:"-"});return r.id;};
@@ -372,7 +355,7 @@ async function seedOPDIfMissing(){
 
  const f5=await addFloor("5","ชั้น 5 — เวชศาสตร์ฟื้นฟู/คลินิกพิเศษนอกเวลา",dRehab);
  await addRoom(f5,"OPD5-01","ห้องกายภาพบำบัด",dRehab);
- await addRoom(f5,"OPD5-02","ห้องแพทย์แผนไทยประยุกต์ (หัตถบำบัด/ประคบสมุนไพร)",dRehab);
+ await addRoom(f5,"OPD5-02","ห้องแพทย์แผนไทยประยุกต์",dRehab);
  await addRoom(f5,"OPD5-03","ศูนย์คลินิกพิเศษเฉพาะทางนอกเวลา (SMC)",dSMC);
 
  const f6=await addFloor("6","ชั้น 6 — สำนักงาน/ห้องประชุมอาคาร OPD",dAdmin);
@@ -423,9 +406,9 @@ function scheduleRerender(){clearTimeout(rerenderTimer);rerenderTimer=setTimeout
    ============================================================ */
 const RL=()=>ME.role;
 const isSuper=()=>RL()==="superadmin";
-function inB(bid){return isSuper()||!ME.scopeB.length||ME.scopeB.includes(bid);}
-function inF(fid){return isSuper()||!ME.scopeF.length||ME.scopeF.includes(fid);}
-function inC(c){return isSuper()||!ME.scopeC.length||ME.scopeC.includes(c);}
+function inB(bid){return isSuper()||!ME.scopeB||!ME.scopeB.length||ME.scopeB.includes(bid);}
+function inF(fid){return isSuper()||!ME.scopeF||!ME.scopeF.length||ME.scopeF.includes(fid);}
+function inC(c){return isSuper()||!ME.scopeC||!ME.scopeC.length||ME.scopeC.includes(c);}
 function pv(res,act){const p=DB.perms[ME.role];return !!(p&&p[res]&&p[res][act]);}
 function canBld(id,act){return pv("bld",act)&&inB(id);}
 function canFlrP(f,act){return pv("flr",act)&&inB(f.bid);}
@@ -529,6 +512,7 @@ auth.onAuthStateChanged(async user=>{
    await dbf.collection("users").doc(user.uid).set(prof);}
   await loadAllOnce();
   ME={id:user.uid,...prof};
+  if(!ME.scopeB)ME.scopeB=[]; if(!ME.scopeF)ME.scopeF=[]; if(!ME.scopeC)ME.scopeC=[];
   attachListeners();
   start();
  }catch(e){alert("โหลดข้อมูลไม่สำเร็จ: "+e.message);}});
@@ -536,9 +520,9 @@ auth.onAuthStateChanged(async user=>{
 function start(){
  document.getElementById("login").classList.add("hidden");document.getElementById("app").classList.remove("hidden");
  let sc=[];
- if(ME.scopeB.length)sc.push("อาคาร "+ME.scopeB.map(i=>B(i).code||"-").join(","));
- if(ME.scopeF.length)sc.push("ชั้น "+ME.scopeF.map(i=>FL(i).no||"-").join(","));
- if(ME.scopeC.length)sc.push("หมวด "+ME.scopeC.join(","));
+ if(ME.scopeB&&ME.scopeB.length)sc.push("อาคาร "+ME.scopeB.map(i=>B(i).code||"-").join(","));
+ if(ME.scopeF&&ME.scopeF.length)sc.push("ชั้น "+ME.scopeF.map(i=>FL(i).no||"-").join(","));
+ if(ME.scopeC&&ME.scopeC.length)sc.push("หมวด "+ME.scopeC.join(","));
  who.textContent=ME.name+" · "+ROLES[ME.role]+(DP(ME.dept).name?" · "+DP(ME.dept).name:"")+(sc.length?" · "+sc.join(" | "):" · ทุกขอบเขต");
  renderNav();go("dash");}
 function renderNav(){
@@ -1281,13 +1265,15 @@ function vUser(){
     <td>${esc(DP(u.dept).name)}</td><td><button class="btn-s btn-sm" onclick="userForm(${i})">ตรวจสอบ/แก้ไข</button></td></tr>`}).join("")}
    </table></div>`:""}
   <div class="card"><table><tr><th>อีเมล</th><th>ชื่อ-สกุล</th><th>ตำแหน่ง</th><th>สังกัด</th><th>เบอร์ภายใน</th><th>ระดับสิทธิ์</th><th>อาคาร</th><th>ชั้น</th><th>หมวด</th><th></th></tr>
-  ${DB.users.map((u,i)=>`<tr><td>${esc(u.em)} ${u.pending?'<span class="chip y">ใหม่</span>':''}</td><td>${esc(u.name)}</td><td>${esc(u.pos)}</td>
+  ${DB.users.map((u,i)=>{
+   const sB=u.scopeB||[], sF=u.scopeF||[], sC=u.scopeC||[];
+   return `<tr><td>${esc(u.em)} ${u.pending?'<span class="chip y">ใหม่</span>':''}</td><td>${esc(u.name)}</td><td>${esc(u.pos)}</td>
    <td>${esc(DP(u.dept).name)||"-"}</td><td>${esc(u.tel)||"-"}</td><td><span class="chip">${ROLES[u.role]}</span></td>
-   <td>${u.scopeB.length?u.scopeB.map(x=>`<span class="chip g">${esc(B(x).code)}</span>`).join(" "):'<span class="chip y">ทุกอาคาร</span>'}</td>
-   <td>${u.scopeF.length?u.scopeF.map(x=>`<span class="chip g">${esc(FL(x).no)}</span>`).join(" "):'<span class="chip y">ทุกชั้น</span>'}</td>
-   <td>${u.scopeC.length?u.scopeC.map(x=>`<span class="chip p">${esc(x)}</span>`).join(" "):'<span class="chip y">ทุกหมวด</span>'}</td>
+   <td>${sB.length?sB.map(x=>`<span class="chip g">${esc(B(x).code)}</span>`).join(" "):'<span class="chip y">ทุกอาคาร</span>'}</td>
+   <td>${sF.length?sF.map(x=>`<span class="chip g">${esc(FL(x).no)}</span>`).join(" "):'<span class="chip y">ทุกชั้น</span>'}</td>
+   <td>${sC.length?sC.map(x=>`<span class="chip p">${esc(x)}</span>`).join(" "):'<span class="chip y">ทุกหมวด</span>'}</td>
    <td><button class="btn-s btn-sm" onclick="userForm(${i})">แก้</button>
-   ${u.em!==ME.em?`<button class="btn-r btn-sm" onclick="delUser(${i})">ลบ</button>`:""}</td></tr>`).join("")}</table></div>`;}
+   ${u.em!==ME.em?`<button class="btn-r btn-sm" onclick="delUser(${i})">ลบ</button>`:""}</td></tr>`}).join("")}</table></div>`;}
 function userForm(i){
  const u=i!=null?DB.users[i]:null;
  mo(`<h3>${u?"แก้ไขผู้ใช้":"เพิ่มผู้ใช้ใหม่"}</h3>
@@ -1303,15 +1289,15 @@ function userForm(i){
   <div class="fld"><label>ขอบเขตอาคาร (ไม่เลือก = ทุกอาคาร)</label>
    <div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px;display:flex;flex-wrap:wrap;gap:10px">
    ${DB.buildings.map(b=>`<label style="display:flex;gap:4px;align-items:center;font-size:13px;color:#334155">
-    <input type="checkbox" class="ub" value="${b.id}" style="width:auto" ${u&&u.scopeB.includes(b.id)?"checked":""}> ${esc(b.code)}</label>`).join("")}</div></div>
+    <input type="checkbox" class="ub" value="${b.id}" style="width:auto" ${u&&u.scopeB&&u.scopeB.includes(b.id)?"checked":""}> ${esc(b.code)}</label>`).join("")}</div></div>
   <div class="fld"><label>ขอบเขตชั้น (ไม่เลือก = ทุกชั้น)</label>
    <div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px;display:flex;flex-wrap:wrap;gap:10px;max-height:150px;overflow:auto">
    ${DB.floors.map(f=>`<label style="display:flex;gap:4px;align-items:center;font-size:13px;color:#334155">
-    <input type="checkbox" class="uf" value="${f.id}" style="width:auto" ${u&&u.scopeF.includes(f.id)?"checked":""}> ${esc(B(f.bid).code)}/${esc(f.no)}</label>`).join("")}</div></div>
+    <input type="checkbox" class="uf" value="${f.id}" style="width:auto" ${u&&u.scopeF&&u.scopeF.includes(f.id)?"checked":""}> ${esc(B(f.bid).code)}/${esc(f.no)}</label>`).join("")}</div></div>
   <div class="fld"><label>ขอบเขตหมวดครุภัณฑ์ (ไม่เลือก = ทุกหมวด)</label>
    <div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px;display:flex;flex-wrap:wrap;gap:10px;max-height:150px;overflow:auto">
    ${DB.cats.map(c=>`<label style="display:flex;gap:4px;align-items:center;font-size:13px;color:#334155">
-    <input type="checkbox" class="uc" value="${c.code}" style="width:auto" ${u&&u.scopeC.includes(c.code)?"checked":""}> ${c.code} ${esc(c.name.slice(0,14))}</label>`).join("")}</div></div>
+    <input type="checkbox" class="uc" value="${c.code}" style="width:auto" ${u&&u.scopeC&&u.scopeC.includes(c.code)?"checked":""}> ${c.code} ${esc(c.name.slice(0,14))}</label>`).join("")}</div></div>
   ${u&&u.pending?`<div class="hint" style="margin-top:10px">บัญชีนี้สมัครเข้ามาเอง ยังไม่ได้รับการตรวจสอบจากแอดมิน</div>`:""}
   <div style="text-align:right;margin-top:10px">
    ${u&&u.pending?`<button class="btn-g" onclick="approveUser(${i})">ยืนยันตรวจสอบแล้ว</button>`:""}
