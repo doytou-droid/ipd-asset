@@ -164,12 +164,12 @@ const MENU=[
  ["floor","มุมมองตามชั้น",()=>true],
  ["dept","ตามหน่วยงาน",()=>true],
  ["asset","ตามครุภัณฑ์",()=>true],
- ["master","ข้อมูลหลัก (อาคาร/ชั้น/ห้อง/หน่วยงาน/หมวด)",()=>canAnyMaster()],
+ ["master","ข้อมูลหลัก",()=>canAnyMaster()],
  ["print","ฟอร์ม A4",()=>true],
  ["log","ประวัติการใช้งาน",()=>["superadmin","bldadmin","catadmin"].includes(RL())],
- ["user","ผู้ใช้งาน",()=>isSuper()],
+ ["user","ผู้ใช้งาน",()=>isSuper() || pv("room","a") || pv("room","e")],
  ["perm","สิทธิ์การเข้าถึง",()=>isSuper()],
- ["data","สำรอง/นำเข้าข้อมูล",()=>["superadmin","bldadmin"].includes(RL())]];
+ ["data","สำรองข้อมูล",()=>["superadmin","bldadmin"].includes(RL())]];
 
 /* ============================================================
    ส่วนที่ 3 : ตัวช่วยรูป/PDF (เก็บ Base64 ลงใน Firestore โดยตรง)
