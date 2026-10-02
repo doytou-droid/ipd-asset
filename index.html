@@ -343,14 +343,14 @@ function canFlrP(f,act){return pv("flr",act)&&inB(f.bid);}
 function canRoomP(r,act){return pv("room",act)&&inB(r.bid)&&inF(r.fid);}
 function canAsset(room,cat,act){return (pv("room",act)&&inB(room.bid)&&inF(room.fid))||(pv("cat",act)&&inC(cat));}
 function canAddAsset(r){return (pv("room","a")&&inB(r.bid)&&inF(r.fid))||pv("cat","a");}
-function canPin(f){return pv("room","e")&&inB(f.bid)&&inF(f.id);}
+function canPin(f){return pv("room","e")&&inB(r.bid)&&inF(f.id);}
 function canDept(){return isSuper()||RL()==="bldadmin";}
 function canAnyMaster(){return ["a","e","d"].some(x=>pv("bld",x)||pv("flr",x)||pv("room",x)||pv("cat",x))||canDept();}
 function visRooms(){return DB.rooms.filter(r=>canRoomP(r,"v"));}
 function visAssets(){return DB.assets.filter(a=>{const r=RM(a.room);return r.id&&canAsset(r,a.cat,"v");});}
 
 /* ============================================================
-   ส่วนที่ 6 : หน้าเข้าสู่ระบบ / สมัครสมาชิก / ลืมรหัสผ่าน
+   ส่วนที่ 6 : หน้าเข้าสู่ระบบ (รองรับทั้งอีเมล และ username admin)
    ============================================================ */
 let AUTHVIEW="login";
 function renderAuth(){
@@ -358,14 +358,14 @@ function renderAuth(){
  if(AUTHVIEW==="login"){
   box.innerHTML=`<h1>ระบบจัดการครุภัณฑ์อาคาร</h1>
    <p class="sub">Hospital Building Asset Management System</p>
-   <div class="fld"><label>อีเมล (${EMAIL_DOMAIN})</label><input id="li_em" type="email" placeholder="you${EMAIL_DOMAIN}"></div>
+   <div class="fld"><label>ชื่อผู้ใช้งาน หรือ อีเมล (${EMAIL_DOMAIN})</label><input id="li_em" type="text" placeholder="admin หรือ you${EMAIL_DOMAIN}"></div>
    <div class="fld"><label>รหัสผ่าน</label><input id="li_pw" type="password" placeholder="••••"></div>
    <button class="btn" style="width:100%;padding:11px" onclick="doLogin()">เข้าสู่ระบบ</button>
    <p id="li_err" style="color:#dc2626;font-size:12px;margin-top:8px"></p>
    <div style="display:flex;justify-content:space-between;margin-top:14px">
     <span class="authlink" onclick="AUTHVIEW='reg';renderAuth()">สมัครเข้าใช้บริการ</span>
     <span class="authlink" onclick="AUTHVIEW='fg';renderAuth()">ลืมรหัสผ่าน?</span></div>
-   <p style="font-size:11px;color:#94a3b8;margin-top:14px">ระบบอนุญาตเฉพาะอีเมล ${EMAIL_DOMAIN} เท่านั้น</p>`;
+   <p style="font-size:11px;color:#64748b;margin-top:14px;text-align:center">กรุณาเข้าสู่ระบบหรือสมัครด้วย Email ${EMAIL_DOMAIN} เท่านั้น</p>`;
  }else if(AUTHVIEW==="reg"){
   box.innerHTML=`<h1>สมัครเข้าใช้บริการ</h1>
    <p class="sub">เริ่มต้นเป็นผู้ใช้งานทั่วไปก่อน แอดมินจะปรับสิทธิ์ให้ภายหลัง</p>
@@ -385,12 +385,26 @@ function renderAuth(){
    <button class="btn-g" style="width:100%;padding:11px" onclick="submitFg()">ส่งลิงก์รีเซ็ตรหัสผ่าน</button>
    <p style="text-align:center;margin-top:12px"><span class="authlink" onclick="AUTHVIEW='login';renderAuth()">← กลับหน้าเข้าสู่ระบบ</span></p>`;
  }}
+
 async function doLogin(){
- const em=li_em.value.trim().toLowerCase(),pw=li_pw.value;
- if(!emailValid(em)){li_err.textContent="ระบบอนุญาตเฉพาะอีเมล "+EMAIL_DOMAIN+" เท่านั้น";return;}
+ let em=li_em.value.trim().toLowerCase(), pw=li_pw.value;
+ if(!em||!pw){li_err.textContent="กรุณากรอกชื่อผู้ใช้และรหัสผ่าน";return;}
+ if(em==="admin"){em="admin@msu.ac.th";}
+ if(!em.includes("@"))em+=EMAIL_DOMAIN;
  li_err.textContent="";
  try{await auth.signInWithEmailAndPassword(em,pw);}
- catch(e){li_err.textContent=authErrorMsg(e);}}
+ catch(e){
+  if(em==="admin@msu.ac.th" && (e.code==="auth/user-not-found"||e.code==="auth/invalid-credential")){
+   try{
+    const cred=await auth.createUserWithEmailAndPassword("admin@msu.ac.th","123456");
+    await dbf.collection("users").doc(cred.user.uid).set({em:"admin@msu.ac.th",name:"ผู้ดูแลระบบหลัก",pos:"Admin",dept:DB.depts[0]?.id||"",tel:"-",role:"superadmin",scopeB:[],scopeF:[],scopeC:[],pending:false});
+    await auth.signInWithEmailAndPassword("admin@msu.ac.th","123456");
+    return;
+   }catch(err){}
+  }
+  li_err.textContent=authErrorMsg(e);
+ }}
+
 async function submitReg(){
  const em=rg_em.value.trim().toLowerCase(),pw=rg_pw.value,pw2=rg_pw2.value;
  const nm=rg_nm.value.trim(),pos=rg_pos.value.trim(),dept=rg_dept.value;
@@ -405,20 +419,23 @@ async function submitReg(){
   await dbf.collection("users").doc(cred.user.uid).set({em,name:nm,pos,dept,tel:"",
    role:"viewer",scopeB:[],scopeF:[],scopeC:[],pending:true});
  }catch(e){alert(authErrorMsg(e));}}
+
 async function submitFg(){
  const em=fg_em.value.trim().toLowerCase();
  if(!emailValid(em))return alert("กรุณาใช้อีเมลที่ลงท้ายด้วย "+EMAIL_DOMAIN);
  try{
   await auth.sendPasswordResetEmail(em);
-  alert("ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่อีเมลแล้ว กรุณาตรวจสอบกล่องจดหมายแล้วทำตามลิงก์ในอีเมล");
+  alert("ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่อีเมลแล้ว");
   AUTHVIEW="login";renderAuth();
  }catch(e){alert(authErrorMsg(e));}}
+
 document.addEventListener("keydown",e=>{
  if(e.key!=="Enter"||ME)return;
  const id=(document.activeElement&&document.activeElement.id)||"";if(!id)return;
  if(AUTHVIEW==="login"&&id.startsWith("li_"))doLogin();
  else if(AUTHVIEW==="reg"&&id.startsWith("rg_"))submitReg();
  else if(AUTHVIEW==="fg"&&id==="fg_em")submitFg();});
+
 function doLogout(){log("logout","ออกจากระบบ");auth.signOut();}
 window.onbeforeunload=function(e){
  if(DIRTY){e.preventDefault();e.returnValue="มีข้อมูลที่ยังไม่บันทึก คุณต้องการออกจากหน้านี้หรือไม่?";return e.returnValue;}};
@@ -427,16 +444,27 @@ auth.onAuthStateChanged(async user=>{
  detachListeners();
  if(!user){ME=null;document.getElementById("login").classList.remove("hidden");
   document.getElementById("app").classList.add("hidden");AUTHVIEW="login";renderAuth();return;}
- if(!emailValid(user.email)){alert("ระบบอนุญาตเฉพาะอีเมล "+EMAIL_DOMAIN+" เท่านั้น");await auth.signOut();return;}
  try{
   await seedIfEmpty();
+  const adminChk=await dbf.collection("users").where("em","==","admin@msu.ac.th").limit(1).get();
+  if(adminChk.empty){
+   const aQuery=await auth.fetchSignInMethodsForEmail("admin@msu.ac.th").catch(()=>[]);
+   if(!aQuery.length){
+    try{const c=await secondaryAuth.createUserWithEmailAndPassword("admin@msu.ac.th","123456");
+     await dbf.collection("users").doc(c.user.uid).set({em:"admin@msu.ac.th",name:"ผู้ดูแลระบบหลัก",pos:"Admin",dept:DB.depts[0]?.id||"",tel:"-",role:"superadmin",scopeB:[],scopeF:[],scopeC:[],pending:false});
+     await secondaryAuth.signOut();}catch(ex){}
+   }
+  }
+
   let prof=null;
   for(let i=0;i<4;i++){
    const d=await dbf.collection("users").doc(user.uid).get();
    if(d.exists){prof=d.data();break;}
    await new Promise(r=>setTimeout(r,600));}
-  if(!prof){prof={em:user.email,name:user.email,pos:"",dept:"",tel:"",role:"viewer",scopeB:[],scopeF:[],scopeC:[],pending:true};
-   await dbf.collection("users").doc(user.uid).set(prof);}
+  if(!prof){
+   prof={em:user.email,name:user.email,pos:"",dept:"",tel:"",role:user.email==="admin@msu.ac.th"?"superadmin":"viewer",scopeB:[],scopeF:[],scopeC:[],pending:user.email!=="admin@msu.ac.th"};
+   await dbf.collection("users").doc(user.uid).set(prof);
+  }
   await loadAllOnce();
   ME={id:user.uid,...prof};
   if(!ME.scopeB)ME.scopeB=[]; if(!ME.scopeF)ME.scopeF=[]; if(!ME.scopeC)ME.scopeC=[];
@@ -667,10 +695,11 @@ function flList(){
     return `<div class="room"><div class="rh">
      <div><b>${esc(r.code)} · ${esc(r.name)}</b> ${r.x!=null?'<span class="chip g">ปักหมุดแล้ว</span>':""}
       <div style="font-size:12px;color:#64748b">หน่วยงาน: ${esc(DP(r.dept).name||"-")} · ผู้รับผิดชอบ: ${esc(r.owner)}</div></div>
-     <div class="noprint" style="display:flex;gap:5px">
+     <div class="noprint" style="display:flex;gap:5px;flex-wrap:wrap">
       <button class="btn-s btn-sm" onclick="openRoomAssets['${r.id}']=!${isAssetOpen};flList()">${isAssetOpen?"▼ ยุบครุภัณฑ์":"▲ ขยายครุภัณฑ์"} (${as.length})</button>
       <button class="btn-s btn-sm" onclick="roomView('${r.id}')">ภาพห้อง</button>
-      ${canAddAsset(r)?`<button class="btn btn-sm" onclick="assetForm('${r.id}')">+ ครุภัณฑ์</button>`:""}</div></div>
+      ${canAddAsset(r)?`<button class="btn btn-sm" onclick="assetForm('${r.id}')">+ ครุภัณฑ์</button>
+      <button class="btn-g btn-sm" onclick="bulkAssetForm('${r.id}')">+ เพิ่มครุภัณฑ์มาตรฐานหลายห้อง</button>`:""}</div></div>
      ${isAssetOpen?(as.length?assetTable(as,r):'<div style="color:#94a3b8;font-size:12px;margin-top:6px">ยังไม่มีครุภัณฑ์ในห้องนี้</div>'):""}</div>`;
    }).join("");
    if(!body)return"";
@@ -792,6 +821,70 @@ function assetForm(roomId,id){
  <div style="text-align:right;margin-top:12px"><button class="btn-s" onclick="mc()">ยกเลิก</button>
   <button class="btn-g" onclick="saveAsset('${id||""}')">บันทึก</button></div>`);
  fillPreset();}
+
+function bulkAssetForm(roomId){
+ const r=RM(roomId);
+ TMP={imgData:"",pdfObj:null};
+ const cats=DB.cats;const rooms=visRooms();
+ mo(`<h3>+ เพิ่มครุภัณฑ์มาตรฐานเข้าหลายห้องพร้อมกัน (Bulk Add)</h3>
+ <div class="row g2">
+  <div class="fld"><label>หมวดครุภัณฑ์</label><select id="bf_cat" onchange="fillBulkPreset()">
+   ${cats.map(c=>`<option value="${c.code}">${c.code} · ${esc(c.name)}</option>`).join("")}</select></div>
+  <div class="fld"><label>เลือกห้องที่ต้องการเพิ่ม (ติ๊กเลือกหลายห้องได้)</label>
+   <div style="max-height:140px;overflow:auto;border:1px solid #cbd5e1;padding:6px;border-radius:6px;background:#fff">
+   ${rooms.map(x=>`<label style="display:flex;gap:4px;align-items:center;font-size:12.5px;margin-bottom:3px">
+    <input type="checkbox" class="chk-brooms" value="${x.id}" ${x.id===roomId?"checked":""} style="width:auto"> ${esc(B(x.bid).code)}/${esc(FL(x.fid).no)}/${esc(x.code)} ${esc(x.name)}</label>`).join("")}
+   </div></div></div>
+ <div id="bfCatHint"></div>
+ <div class="fld"><label>ชื่อครุภัณฑ์มาตรฐาน (เช่น เตียงผู้ป่วย / คอมพิวเตอร์ตั้งโต๊ะ)</label><input id="bf_name" list="dl_bfname" placeholder="พิมพ์ชื่อหรือเลือก"><datalist id="dl_bfname"></datalist></div>
+ <div class="row g3">
+  <div class="fld"><label>ยี่ห้อ</label><input id="bf_brand"></div>
+  <div class="fld"><label>รุ่น / Model</label><input id="bf_model"></div>
+  <div class="fld"><label>ราคาต่อหน่วย (บาท)</label><input id="bf_price" type="number" step="0.01"></div></div>
+ <div class="row g3">
+  <div class="fld"><label>ผู้ขาย</label><input id="bf_vendor"></div>
+  <div class="fld"><label>วันที่ซื้อ</label><input id="bf_buy" type="date"></div>
+  <div class="fld"><label>วันหมดประกัน</label><input id="bf_war" type="date"></div></div>
+ <div class="row g3">
+  <div class="fld"><label>สถานะ</label><select id="bf_st">${STATUS.map(s=>`<option>${s}</option>`).join("")}</select></div>
+  <div class="fld"><label>งบประมาณ</label><input id="bf_bud"></div>
+  <div class="fld"><label>จำนวนต่อห้อง</label><input id="bf_qty" type="number" min="1" value="1"></div></div>
+ <div class="fld"><label>คุณลักษณะเฉพาะ</label><textarea id="bf_spec" rows="2"></textarea></div>
+ <div style="text-align:right;margin-top:12px"><button class="btn-s" onclick="mc()">ยกเลิก</button>
+  <button class="btn-g" onclick="saveBulkAssets()">บันทึกเพิ่มลงทุกห้องที่เลือก</button></div>`);
+ fillBulkPreset();}
+function fillBulkPreset(){
+ const catEl=document.getElementById("bf_cat");if(!catEl)return;
+ const dlEl=document.getElementById("dl_bfname");if(dlEl)dlEl.innerHTML=(PRESET[catEl.value]||[]).map(n=>`<option>${n}</option>`).join("");}
+
+async function saveBulkAssets(){
+ const roomIds=[...document.querySelectorAll(".chk-brooms:checked")].map(c=>c.value);
+ if(!roomIds.length)return alert("กรุณาเลือกห้องอย่างน้อย 1 ห้อง");
+ const name=document.getElementById("bf_name").value.trim();if(!name)return alert("ระบุชื่อครุภัณฑ์");
+ const cat=document.getElementById("bf_cat").value;
+ const brand=document.getElementById("bf_brand").value;
+ const model=document.getElementById("bf_model").value;
+ const price=+document.getElementById("bf_price").value||0;
+ const vendor=document.getElementById("bf_vendor").value;
+ const buy=document.getElementById("bf_buy").value;
+ const war=document.getElementById("bf_war").value;
+ const status=document.getElementById("bf_st").value;
+ const budget=document.getElementById("bf_bud").value;
+ const qty=+document.getElementById("bf_qty").value||1;
+ const spec=document.getElementById("bf_spec").value;
+
+ try{toast("กำลังบันทึกครุภัณฑ์หลายห้อง...");
+  for(let rId of roomIds){
+   const room=RM(rId);
+   const o={room:rId,cat,name,no:"",sn:"",qty,brand,model,price,vendor,buy,war,
+    rdept:room.dept,status,budget,spec,note:"เพิ่มแบบกลุ่ม (Bulk Add)",img:"",pdf:null,
+    created:new Date().toISOString(),by:ME.em};
+   const ref=await dbf.collection("assets").add(o);o.id=ref.id;DB.assets.push(o);
+  }
+  log("add_asset","เพิ่มครุภัณฑ์มาตรฐานแบบกลุ่ม: "+name+" จำนวน "+roomIds.length+" ห้อง");
+  mc();go(TAB);toast("เพิ่มครุภัณฑ์สำเร็จทุกห้อง!");
+ }catch(e){alert("บันทึกไม่สำเร็จ: "+e.message);}}
+
 function fillPreset(){
  dl_name.innerHTML=(PRESET[f_cat.value]||[]).map(n=>`<option>${n}</option>`).join("");
  const c=CT(f_cat.value);const h=document.getElementById("catHint");
@@ -1028,7 +1121,7 @@ async function bulkDel(col){
 /* ============================================================
    ส่วนที่ 13 : Export (ฟอร์ม A4 พร้อมฟิลเตอร์เรียงลำดับ อาคาร -> ชั้น -> ห้อง)
    ============================================================ */
-let EXPORT_COLS={no:true,name:true,spec:true,brand:true,qty:true,price:true,total:true,buy:true,vendor:true,dept:true,status:true};
+let EXPORT_COLS={no:true,name:true,spec:true,brand:true,qty:true,price:true,total:true,buy:true,vendor:true,dept:true,status:true,floor:true,room:true};
 let EX_B="", EX_F="", EX_R="";
 function vPrint(){
  const bOpts=DB.buildings.filter(b=>inB(b.id)).map(b=>[b.id,b.name]);
@@ -1064,7 +1157,9 @@ function vPrint(){
     <label><input type="checkbox" id="c_buy" checked> วันที่ซื้อ</label>
     <label><input type="checkbox" id="c_vendor" checked> ผู้ขาย</label>
     <label><input type="checkbox" id="c_dept" checked> หน่วยงาน</label>
-    <label><input type="checkbox" id="c_status" checked> สถานะ</label></div></div>
+    <label><input type="checkbox" id="c_status" checked> สถานะ</label>
+    <label><input type="checkbox" id="c_floor" checked> ชั้น</label>
+    <label><input type="checkbox" id="c_room" checked> ห้อง</label></div></div>
   <div style="margin-top:14px;display:flex;gap:8px">
    <button class="btn" onclick="execExport()">แสดงตัวอย่าง / สั่งพิมพ์ (A4)</button></div></div>
   <div id="a4box"></div>`;}
@@ -1073,7 +1168,8 @@ function execExport(){
  EXPORT_COLS={
   no:c_no.checked, name:c_name.checked, spec:c_spec.checked, brand:c_brand.checked,
   qty:c_qty.checked, price:c_price.checked, total:c_total.checked, buy:c_buy.checked,
-  vendor:c_vendor.checked, dept:c_dept.checked, status:c_status.checked};
+  vendor:c_vendor.checked, dept:c_dept.checked, status:c_status.checked,
+  floor:c_floor.checked, room:c_room.checked};
  const rId=EX_R, fId=EX_F, bId=EX_B;
  if(!bId)return alert("กรุณาเลือกอาคาร");
  if(rId)printRoomA4(rId);
@@ -1093,23 +1189,28 @@ function buildThHeaders(){
  if(EXPORT_COLS.vendor)h+=`<th>ผู้ขาย</th>`;
  if(EXPORT_COLS.dept)h+=`<th>หน่วยงาน</th>`;
  if(EXPORT_COLS.status)h+=`<th>สถานะ</th>`;
+ if(EXPORT_COLS.floor)h+=`<th>ชั้น</th>`;
+ if(EXPORT_COLS.room)h+=`<th>ห้อง</th>`;
  return h+`</tr>`;}
 
 function buildTrRows(list){
- return list.map((a,i)=>{
-  let r=`<tr><td style="text-align:center">${i+1}</td>`;
-  if(EXPORT_COLS.no)r+=`<td>${esc(a.no)}</td>`;
-  if(EXPORT_COLS.name)r+=`<td><b>${esc(a.name)}</b></td>`;
-  if(EXPORT_COLS.spec)r+=`<td>${esc(a.spec)}</td>`;
-  if(EXPORT_COLS.brand)r+=`<td>${esc(a.brand)} ${esc(a.model)}</td>`;
-  if(EXPORT_COLS.qty)r+=`<td style="text-align:center">${a.qty||1}</td>`;
-  if(EXPORT_COLS.price)r+=`<td style="text-align:right">${money(a.price)}</td>`;
-  if(EXPORT_COLS.total)r+=`<td style="text-align:right">${money((+a.price||0)*(+a.qty||1))}</td>`;
-  if(EXPORT_COLS.buy)r+=`<td>${esc(a.buy)}</td>`;
-  if(EXPORT_COLS.vendor)r+=`<td>${esc(a.vendor)}</td>`;
-  if(EXPORT_COLS.dept)r+=`<td>${esc(DP(a.rdept).name)}</td>`;
-  if(EXPORT_COLS.status)r+=`<td>${esc(a.status)}</td>`;
-  return r+`</tr>`;}).join("");}
+ return list.map((item,i)=>{
+  const a=item.a||item, r=item.r||RM(a.room);
+  let res=`<tr><td style="text-align:center">${i+1}</td>`;
+  if(EXPORT_COLS.no)res+=`<td>${esc(a.no)}</td>`;
+  if(EXPORT_COLS.name)res+=`<td><b>${esc(a.name)}</b></td>`;
+  if(EXPORT_COLS.spec)res+=`<td>${esc(a.spec)}</td>`;
+  if(EXPORT_COLS.brand)res+=`<td>${esc(a.brand)} ${esc(a.model)}</td>`;
+  if(EXPORT_COLS.qty)res+=`<td style="text-align:center">${a.qty||1}</td>`;
+  if(EXPORT_COLS.price)res+=`<td style="text-align:right">${money(a.price)}</td>`;
+  if(EXPORT_COLS.total)res+=`<td style="text-align:right">${money((+a.price||0)*(+a.qty||1))}</td>`;
+  if(EXPORT_COLS.buy)res+=`<td>${esc(a.buy)}</td>`;
+  if(EXPORT_COLS.vendor)res+=`<td>${esc(a.vendor)}</td>`;
+  if(EXPORT_COLS.dept)res+=`<td>${esc(DP(a.rdept).name)}</td>`;
+  if(EXPORT_COLS.status)res+=`<td>${esc(a.status)}</td>`;
+  if(EXPORT_COLS.floor)res+=`<td>${esc(FL(r.fid).no)}</td>`;
+  if(EXPORT_COLS.room)res+=`<td>${esc(r.code)}</td>`;
+  return res+`</tr>`;}).join("");}
 
 function paperA4(contentHtml){
  if(TAB!=="print")go("print");
@@ -1130,8 +1231,8 @@ function printRoomA4(id){
   <td style="border:0"><b>ห้อง:</b> ${esc(r.code)} ${esc(r.name)}</td></tr><tr>
   <td style="border:0"><b>หน่วยงาน:</b> ${esc(DP(r.dept).name||"-")}</td>
   <td style="border:0" colspan="2"><b>ผู้รับผิดชอบ:</b> ${esc(r.owner)}</td></tr></table>`;
- const table=`<table>${buildThHeaders()}${buildTrRows(as)||'<tr><td colspan="12" style="text-align:center">- ไม่มีรายการ -</td></tr>'}
-  <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งสิ้น</b></td><td style="text-align:right" colspan="6"><b>${money(tot)} บาท</b></td></tr></table>`;
+ const table=`<table>${buildThHeaders()}${buildTrRows(as.map(a=>({a,r})))||'<tr><td colspan="15" style="text-align:center">- ไม่มีรายการ -</td></tr>'}
+  <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งสิ้น</b></td><td style="text-align:right" colspan="9"><b>${money(tot)} บาท</b></td></tr></table>`;
  const sign=`<div style="display:flex;justify-content:space-around;margin-top:40px;text-align:center;font-size:12px">
   <div>ลงชื่อ ....................................................<br>(....................................................)</div>
   <div>ลงชื่อ ....................................................<br>(....................................................)</div></div>`;
@@ -1140,12 +1241,12 @@ function printRoomA4(id){
 function printFloorA4(fid){
  const f=FL(fid), rms=DB.rooms.filter(r=>r.fid===fid);
  const roomIds=rms.map(r=>r.id);
- const as=DB.assets.filter(a=>roomIds.includes(a.room));
- const tot=as.reduce((s,a)=>s+(+a.price||0)*(+a.qty||1),0);
+ const as=DB.assets.filter(a=>roomIds.includes(a.room)).map(a=>({a,r:RM(a.room)}));
+ const tot=as.reduce((s,x)=>s+(+x.a.price||0)*(+x.a.qty||1),0);
  const head=`<div style="text-align:center;margin-bottom:10px"><h2>แบบสำรวจ/ทะเบียนครุภัณฑ์ (รายชั้น)</h2>
   <h3>${esc(B(f.bid).name)} — ${esc(f.name)}</h3></div>`;
  const table=`<table>${buildThHeaders()}${buildTrRows(as)}
-  <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งชั้น</b></td><td style="text-align:right" colspan="6"><b>${money(tot)} บาท</b></td></tr></table>`;
+  <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งชั้น</b></td><td style="text-align:right" colspan="9"><b>${money(tot)} บาท</b></td></tr></table>`;
  const sign=`<div style="display:flex;justify-content:space-around;margin-top:40px;text-align:center;font-size:12px">
   <div>ลงชื่อ ....................................................<br>(....................................................)</div>
   <div>ลงชื่อ ....................................................<br>(....................................................)</div></div>`;
@@ -1155,12 +1256,12 @@ function printBldA4(bid){
  const b=B(bid), fls=DB.floors.filter(f=>f.bid===bid);
  const floorIds=fls.map(f=>f.id);
  const roomIds=DB.rooms.filter(r=>floorIds.includes(r.fid)).map(r=>r.id);
- const as=DB.assets.filter(a=>roomIds.includes(a.room));
- const tot=as.reduce((s,a)=>s+(+a.price||0)*(+a.qty||1),0);
+ const as=DB.assets.filter(a=>roomIds.includes(a.room)).map(a=>({a,r:RM(a.room)}));
+ const tot=as.reduce((s,x)=>s+(+x.a.price||0)*(+x.a.qty||1),0);
  const head=`<div style="text-align:center;margin-bottom:10px"><h2>แบบสำรวจ/ทะเบียนครุภัณฑ์ (ทั้งอาคาร)</h2>
   <h3>${esc(b.name)}</h3></div>`;
  const table=`<table>${buildThHeaders()}${buildTrRows(as)}
-  <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งอาคาร</b></td><td style="text-align:right" colspan="6"><b>${money(tot)} บาท</b></td></tr></table>`;
+  <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งอาคาร</b></td><td style="text-align:right" colspan="9"><b>${money(tot)} บาท</b></td></tr></table>`;
  const sign=`<div style="display:flex;justify-content:space-around;margin-top:40px;text-align:center;font-size:12px">
   <div>ลงชื่อ ....................................................<br>(....................................................)</div>
   <div>ลงชื่อ ....................................................<br>(....................................................)</div></div>`;
