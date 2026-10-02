@@ -85,6 +85,7 @@ img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px s
 .export-order-item input{width:16px;height:16px;margin:0}
  .export-selection-box{border:1px solid #dbe3ef;border-radius:10px;background:#f8fafc;padding:10px;margin-top:10px}.export-selection-list{margin-top:8px;max-height:330px;overflow:auto;background:#fff;border:1px solid #e2e8f0;border-radius:8px}.export-selection-row{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-bottom:1px solid #eef2f7;font-size:12px;cursor:pointer;margin:0}.export-selection-row:last-child{border-bottom:0}.export-selection-row input{width:16px;height:16px;flex:0 0 auto;margin-top:1px}.export-selection-row span{display:flex;flex-direction:column;gap:2px}.export-selection-row small{font-size:10px;color:#94a3b8}.export-preview-toolbar{padding:10px 0;text-align:center}
 .export-group{background:#e0ecff !important;color:#173b82;font-weight:700;border:1px solid #9fc0ff !important}
+.export-cat-block{border-bottom:1px solid #eef2f7}.export-cat-head{display:grid;grid-template-columns:26px 1fr auto;align-items:center;gap:8px;background:#f8fafc;padding:8px 10px;position:sticky;top:0;z-index:1}.export-cat-toggle{padding:2px 6px;background:#e2e8f0;color:#334155;font-size:12px}.export-cat-title{display:flex;flex-direction:column;gap:1px;min-width:0}.export-cat-title b{font-size:12px}.export-cat-title small{font-size:10px;color:#94a3b8}.export-cat-select{display:flex;align-items:center;gap:5px;margin:0;white-space:nowrap;font-size:11px;color:#475569}.export-cat-select input{width:15px;height:15px;margin:0}.export-asset-group{border-bottom:1px solid #eef2f7}.export-group-row{display:grid;grid-template-columns:18px 26px 1fr;gap:7px;align-items:center;padding:7px 10px;background:#fff}.export-group-row:hover{background:#f8fbff}.export-group-row input{width:16px;height:16px;margin:0}.export-expand{padding:2px 4px;background:#e2e8f0;color:#334155;font-size:12px}.export-group-name{display:flex;flex-direction:column;gap:1px;min-width:0}.export-group-name b{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.export-group-name small{font-size:10px;color:#94a3b8}.export-subitems{background:#f8fafc;border-top:1px solid #eef2f7;padding:4px 10px 6px 58px}.export-subitem{display:flex;align-items:center;gap:6px;margin:0;padding:4px 0;font-size:10.5px;color:#475569}.export-subitem input{width:15px;height:15px;margin:0;flex:0 0 auto}
 
 @media print{
   html,body{background:#fff !important;margin:0 !important;padding:0 !important;overflow:visible !important}
@@ -94,10 +95,10 @@ img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px s
   main{padding:0 !important;max-width:none !important;margin:0 !important;overflow:visible !important}
   #view{padding:0 !important;margin:0 !important;overflow:visible !important}
   #a4box{display:block !important;width:100% !important;max-height:none !important;overflow:visible !important;margin:0 !important;padding:0 !important}
-  .a4sheet{width:100% !important;min-height:0 !important;margin:0 !important;padding:0 !important;box-shadow:none !important;border:0 !important;border-radius:0 !important;page-break-after:always;overflow:visible !important}
-  .a4sheet.portrait{min-height:277mm !important}.a4sheet.landscape{min-height:196mm !important}
+  .a4sheet{width:100% !important;min-height:0 !important;margin:0 !important;padding:0 !important;box-shadow:none !important;border:0 !important;border-radius:0 !important;page-break-after:always;overflow:visible !important;display:block !important}
+  .a4sheet.portrait,.a4sheet.landscape{min-height:0 !important}
   .a4sheet table{width:100% !important}.a4sheet thead{display:table-header-group}.a4sheet tr{break-inside:avoid;page-break-inside:avoid}
-  .footer-page{position:static !important;margin-top:10mm !important;padding-top:4mm !important;break-inside:avoid;page-break-inside:avoid}
+  .footer-page{position:static !important;margin:8mm 0 0 !important;padding-top:3mm !important;border-top:1px solid #cbd5e1 !important;break-inside:avoid;page-break-inside:avoid;display:flex !important}
   .export-group{break-after:avoid;page-break-after:avoid}
   @page{size:A4 portrait;margin:10mm}
 }
@@ -856,7 +857,7 @@ async function saveBulkAssets(){
    const o={room:rId,cat,name,no:"",sn:"",qty,brand,model,price,vendor,buy,war,
     rdept:room.dept,status,budget,spec,note:"เพิ่มแบบกลุ่ม (Bulk Add)",img:"",pdf:null,
     created:new Date().toISOString(),by:ME.em};
-   const ref=await dbf.collection("assets").add(o);o.id=ref.id;DB.assets.push(o);
+   const ref=await dbf.collection("assets").add(o);o.id=ref.id;DB.assets.push(o);EX_POOL_CACHE={key:"",len:-1,data:[]};
   }
   log("add_asset","เพิ่มครุภัณฑ์มาตรฐานแบบกลุ่ม: "+name+" จำนวน "+roomIds.length+" ห้อง");
   mc();go(TAB);toast("เพิ่มครุภัณฑ์สำเร็จทุกห้อง!");
@@ -885,6 +886,7 @@ async function saveAsset(id){
  try{toast("กำลังบันทึก...");
   if(id)await dbf.collection("assets").doc(id).set(o,{merge:true});
   else{o.created=new Date().toISOString();o.by=ME.em;const ref=await dbf.collection("assets").add(o);o.id=ref.id;DB.assets.push(o);}
+  EX_POOL_CACHE={key:"",len:-1,data:[]};
   log(id?"edit_asset":"add_asset",(id?"แก้ไข ":"เพิ่ม ")+o.name);
   TMP={};DIRTY=false;mc();go(TAB);toast("บันทึกสำเร็จ");
  }catch(e){alert("บันทึกไม่สำเร็จ: "+e.message);}}
@@ -1114,7 +1116,7 @@ const EXPORT_GROUPS=[
 let EXPORT_COLS={img:false,no:true,name:true,spec:false,brand:true,qty:true,price:true,total:true,buy:true,vendor:false,dept:true,status:true,floor:true,room:true};
 let EXPORT_ORDER=EXPORT_FIELDS.map(x=>x.key);
 let EX_B="",EX_F="",EX_R="",EX_D="",EXPORT_ORIENT="portrait",EX_VIEW="room";
-let EX_SELECTED=new Set(),EX_SELECTION_KEY="";
+let EX_SELECTED=new Set(),EX_SELECTION_KEY="",EX_POOL_CACHE={key:"",len:-1,data:[]},EX_GROUP_OPEN=new Set(),EX_CAT_OPEN=new Set(),EX_PICK_Q="";
 
 function syncExportColsFromUI(){
  EXPORT_FIELDS.forEach(f=>{const el=document.getElementById("c_"+f.key);if(el)EXPORT_COLS[f.key]=!!el.checked;});
@@ -1127,34 +1129,127 @@ function moveExportCol(key,dir){
  [EXPORT_ORDER[i],EXPORT_ORDER[j]]=[EXPORT_ORDER[j],EXPORT_ORDER[i]];vPrint();
 }
 function exportLocationPool(){
+ const key=[EX_D,EX_B,EX_F,EX_R].join("|");
+ if(EX_POOL_CACHE.key===key&&EX_POOL_CACHE.len===DB.assets.length)return EX_POOL_CACHE.data;
  let src=DB.assets.map(a=>({a,r:RM(a.room)})).filter(x=>x.r.id);
+ if(EX_D)src=src.filter(x=>x.r.dept===EX_D||x.a.rdept===EX_D);
  if(EX_B)src=src.filter(x=>x.r.bid===EX_B);
  if(EX_F)src=src.filter(x=>x.r.fid===EX_F);
  if(EX_R)src=src.filter(x=>x.r.id===EX_R);
- if(EX_D)src=src.filter(x=>x.r.dept===EX_D||x.a.rdept===EX_D);
- return src.sort((x,y)=>{
+ src.sort((x,y)=>{
   const ax=`${B(x.r.bid).code||""}|${FL(x.r.fid).no||""}|${x.r.code||""}|${x.a.name||""}|${x.a.no||""}`;
   const ay=`${B(y.r.bid).code||""}|${FL(y.r.fid).no||""}|${y.r.code||""}|${y.a.name||""}|${y.a.no||""}`;
   return naturalSort(ax,ay);
+ });
+ EX_POOL_CACHE={key,len:DB.assets.length,data:src};
+ return src;
+}
+function exportAssetGroups(){
+ const groups=new Map();
+ exportLocationPool().forEach(x=>{
+  const cat=x.a.cat||"none",name=(x.a.name||"ไม่ระบุรายการ").trim()||"ไม่ระบุรายการ",key=cat+"::"+name.toLowerCase();
+  if(!groups.has(key))groups.set(key,{key,cat,name,items:[],qty:0});
+  const g=groups.get(key);g.items.push(x);g.qty+=(+x.a.qty||1);
+ });
+ return [...groups.values()].sort((a,b)=>naturalSort((a.cat||"")+"|"+(a.name||""),(b.cat||"")+"|"+(b.name||"")));
+}
+function exportCategoryGroups(){
+ const map=new Map();
+ exportAssetGroups().forEach(g=>{const key=g.cat||"none";if(!map.has(key))map.set(key,{key,label:`${key} · ${CT(key).name||"ไม่ระบุหมวด"}`,groups:[],qty:0});const c=map.get(key);c.groups.push(g);c.qty+=g.qty;});
+ return [...map.values()].sort((a,b)=>naturalSort(a.key,b.key));
+}
+function exportGroupIds(g){return g.items.map(x=>x.a.id);}
+function exportGroupSelectedState(g){
+ const ids=exportGroupIds(g);
+ const selected=ids.reduce((n,id)=>n+(EX_SELECTED.has(id)?1:0),0);
+ return {selected,total:ids.length,all:selected===ids.length&&ids.length>0,partial:selected>0&&selected<ids.length};
+}
+function updateExportGroupChecks(){
+ document.querySelectorAll('.export-group-check').forEach(cb=>{
+  const g=exportAssetGroups().find(x=>x.key===cb.dataset.gkey);if(!g)return;
+  const st=exportGroupSelectedState(g);cb.checked=st.all;cb.indeterminate=st.partial;
  });
 }
 function exportSelectionKey(){return [EX_B,EX_F,EX_R,EX_D].join("|");}
 function ensureExportSelection(){
  const key=exportSelectionKey();
- if(EX_SELECTION_KEY!==key){EX_SELECTED=new Set(exportLocationPool().map(x=>x.a.id));EX_SELECTION_KEY=key;}
+ if(EX_SELECTION_KEY!==key){EX_SELECTED=new Set(exportLocationPool().map(x=>x.a.id));EX_SELECTION_KEY=key;EX_GROUP_OPEN=new Set();EX_CAT_OPEN=new Set();EX_PICK_Q="";}
 }
 function resetExportSelection(){EX_SELECTION_KEY="";ensureExportSelection();}
-function toggleExportAsset(id,checked){if(checked)EX_SELECTED.add(id);else EX_SELECTED.delete(id);updateExportSelectionStatus();}
+function toggleExportAsset(id,checked){if(checked)EX_SELECTED.add(id);else EX_SELECTED.delete(id);updateExportSelectionStatus();updateExportGroupChecks();}
+function toggleExportGroup(key,checked){
+ const g=exportAssetGroups().find(x=>x.key===key);if(!g)return;
+ exportGroupIds(g).forEach(id=>{if(checked)EX_SELECTED.add(id);else EX_SELECTED.delete(id);});
+ updateExportSelectionStatus();updateExportGroupChecks();renderExportSelectionPanel();
+}
 function toggleAllExportAssets(checked){ensureExportSelection();exportLocationPool().forEach(x=>{if(checked)EX_SELECTED.add(x.a.id);else EX_SELECTED.delete(x.a.id);});vPrint();}
+function clearExportSelection(){EX_SELECTED.clear();updateExportSelectionStatus();renderExportSelectionPanel();}
+function selectAllExportVisible(){const q=(EX_PICK_Q||"").trim().toLowerCase();exportAssetGroups().forEach(g=>{const hay=(g.cat+" "+g.name).toLowerCase();if(!q||hay.includes(q))g.items.forEach(x=>EX_SELECTED.add(x.a.id));});updateExportSelectionStatus();renderExportSelectionPanel();}
+function toggleExportGroupOpen(key){if(EX_GROUP_OPEN.has(key))EX_GROUP_OPEN.delete(key);else EX_GROUP_OPEN.add(key);renderExportSelectionPanel();}
+function setExportPickQuery(v){EX_PICK_Q=v||"";renderExportSelectionPanel();}
 function updateExportSelectionStatus(){
  const pool=exportLocationPool(),selectedInPool=pool.reduce((n,x)=>n+(EX_SELECTED.has(x.a.id)?1:0),0);
  const el=document.getElementById("exportSelectionStatus");if(el)el.textContent=`เลือก ${selectedInPool.toLocaleString("th-TH")} / ${pool.length.toLocaleString("th-TH")} รายการ`;
  const all=pool.length>0&&selectedInPool===pool.length;const cb=document.getElementById("ex_select_all");if(cb)cb.checked=all;
+ const selSummary=document.getElementById("exportSelectedSummary");
+ if(selSummary){
+  const chosen=exportAssetGroups().filter(g=>exportGroupSelectedState(g).selected>0);
+  selSummary.innerHTML=chosen.length?chosen.slice(0,12).map(g=>`<span class="chip">${esc(g.name)} · ${exportGroupSelectedState(g).selected.toLocaleString("th-TH")}</span>`).join(" ")+(chosen.length>12?` <span class="chip y">+${(chosen.length-12).toLocaleString("th-TH")} รายการ</span>`:""):'<span style="font-size:11px;color:#94a3b8">ยังไม่ได้เลือกรายการ</span>';
+ }
 }
 function setPrintPageStyle(){
  let st=document.getElementById("printPageStyle");
  if(!st){st=document.createElement("style");st.id="printPageStyle";document.head.appendChild(st);}
  st.textContent=`@media print{@page{size:${EXPORT_ORIENT==="landscape"?"A4 landscape":"A4 portrait"};margin:${EXPORT_ORIENT==="landscape"?"7mm":"10mm"}}`;
+}
+function toggleExportCategoryOpen(key){if(EX_CAT_OPEN.has(key))EX_CAT_OPEN.delete(key);else EX_CAT_OPEN.add(key);renderExportSelectionPanel();}
+function renderExportSelectionPanel(){
+ const host=document.getElementById("exportSelectionList");if(!host)return;
+ const q=(EX_PICK_Q||"").trim().toLowerCase();
+ const cats=exportCategoryGroups();
+ const filtered=cats.map(c=>({...c,groups:c.groups.filter(g=>!q||(g.cat+" "+g.name).toLowerCase().includes(q))})).filter(c=>c.groups.length);
+ let html="";
+ if(!filtered.length){html='<div class="chart-empty" style="height:100px">ไม่พบรายการครุภัณฑ์</div>';}
+ else{
+  // เมื่อค้นหา ให้เปิดหมวดที่ตรงอัตโนมัติ เพื่อให้เข้าถึงรายการได้ทันที
+  if(q)filtered.forEach(c=>EX_CAT_OPEN.add(c.key));
+  for(const c of filtered){
+   const catOpen=EX_CAT_OPEN.has(c.key);
+   const allCatSelected=c.groups.length>0&&c.groups.every(g=>exportGroupSelectedState(g).all);
+   const someCatSelected=c.groups.some(g=>exportGroupSelectedState(g).selected>0);
+   html+=`<div class="export-cat-block">
+    <div class="export-cat-head">
+      <button type="button" class="export-cat-toggle" onclick="toggleExportCategoryOpen(${JSON.stringify(c.key)})">${catOpen?"▾":"▸"}</button>
+      <span class="export-cat-title"><b>${esc(c.label)}</b><small>${c.groups.length.toLocaleString("th-TH")} รายการ · ${c.qty.toLocaleString("th-TH")} ชิ้น</small></span>
+      <label class="export-cat-select"><input type="checkbox" ${allCatSelected?"checked":""} ${someCatSelected&&!allCatSelected?'data-partial="1"':''} onchange="toggleExportCategory(${JSON.stringify(c.key)},this.checked)"> เลือกทั้งหมวด</label>
+    </div>`;
+   if(catOpen){
+    for(const g of c.groups){
+      const st=exportGroupSelectedState(g);const open=EX_GROUP_OPEN.has(g.key);
+      html+=`<div class="export-asset-group">
+        <div class="export-group-row">
+         <input class="export-group-check" data-gkey="${esc(g.key)}" type="checkbox" ${st.all?"checked":""} onchange="toggleExportGroup(${JSON.stringify(g.key)},this.checked)">
+         <button type="button" class="export-expand" onclick="toggleExportGroupOpen(${JSON.stringify(g.key)})">${open?"▾":"▸"}</button>
+         <span class="export-group-name"><b>${esc(g.name)}</b><small>${g.items.length.toLocaleString("th-TH")} รายการ · ${g.qty.toLocaleString("th-TH")} ชิ้น · เลือกแล้ว ${st.selected.toLocaleString("th-TH")}</small></span>
+        </div>`;
+      if(open){
+        const items=g.items.slice().sort((x,y)=>naturalSort((x.r.code||"")+"|"+(x.a.no||""),(y.r.code||"")+"|"+(y.a.no||"")));
+        html+=`<div class="export-subitems">${items.map(x=>`<label class="export-subitem"><input type="checkbox" ${EX_SELECTED.has(x.a.id)?"checked":""} onchange="toggleExportAsset(${JSON.stringify(x.a.id)},this.checked)"><span>${esc(x.a.no||"รอออกเลข")} · ${esc(B(x.r.bid).code||"")} ชั้น ${esc(FL(x.r.fid).no||"")} · ${esc(x.r.code||"")}</span></label>`).join("")}</div>`;
+      }
+      html+=`</div>`;
+    }
+   }
+   html+=`</div>`;
+  }
+ }
+ host.innerHTML=html;
+ document.querySelectorAll('.export-cat-select input[data-partial="1"]').forEach(cb=>cb.indeterminate=true);
+ updateExportSelectionStatus();updateExportGroupChecks();
+}
+function toggleExportCategory(key,checked){
+ const c=exportCategoryGroups().find(x=>x.key===key);if(!c)return;
+ c.groups.forEach(g=>g.items.forEach(x=>{if(checked)EX_SELECTED.add(x.a.id);else EX_SELECTED.delete(x.a.id);}));
+ updateExportSelectionStatus();renderExportSelectionPanel();
 }
 function vPrint(){
  syncExportColsFromUI();
@@ -1178,37 +1273,38 @@ function vPrint(){
    <div><label>4. ห้อง</label><select id="ex_r" onchange="EX_R=this.value;resetExportSelection();vPrint()">
     <option value="">- ทุกห้อง -</option>${rOpts.map(o=>`<option value="${o.id}" ${o.id===EX_R?"selected":""}>${esc(o.code+" — "+o.name)}</option>`).join("")}</select></div>
   </div>
-  <div class="row g3" style="margin-top:10px">
+  <div class="row g2" style="margin-top:10px">
    <div><label>รูปแบบรายงาน</label><select id="ex_view" onchange="setExportView(this.value)">${EXPORT_GROUPS.map(g=>`<option value="${g.key}" ${EX_VIEW===g.key?"selected":""}>${g.label}</option>`).join("")}</select></div>
    <div><label>การวางหน้ากระดาษ</label><div class="orientation-picker">
     <label><input type="radio" name="ex_orientation" value="portrait" ${EXPORT_ORIENT==="portrait"?"checked":""} onchange="setExportOrientation(this.value)"> แนวตั้ง A4</label>
     <label><input type="radio" name="ex_orientation" value="landscape" ${EXPORT_ORIENT==="landscape"?"checked":""} onchange="setExportOrientation(this.value)"> แนวนอน A4</label>
    </div></div>
-   <div><label>รูปภาพ</label><label class="checkline"><input type="checkbox" id="c_img" ${EXPORT_COLS.img?"checked":""}> รูปครุภัณฑ์ขนาดย่อ</label></div>
   </div>
   <div class="export-selection-box">
    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
     <b style="font-size:13px;color:#1e3a8a">เลือกรายการครุภัณฑ์ที่จะพิมพ์</b>
-    <span id="exportSelectionStatus" class="import-count">เลือก ${EX_SELECTED.size.toLocaleString("th-TH")} / ${pool.length.toLocaleString("th-TH")} รายการ</span>
+    <span id="exportSelectionStatus" class="import-count">เลือก 0 / 0 รายการ</span>
    </div>
    <div style="margin-top:7px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px">
     <label class="checkline"><input type="checkbox" id="ex_select_all" onchange="toggleAllExportAssets(this.checked)"> เลือกทั้งหมดที่แสดง</label>
-    <button type="button" class="btn-s btn-sm" onclick="EX_SELECTED.clear();updateExportSelectionStatus();vPrint()">ไม่เลือกทั้งหมด</button>
+    <button type="button" class="btn-s btn-sm" onclick="selectAllExportVisible()">เลือกตามที่ค้นหา</button>
+    <button type="button" class="btn-s btn-sm" onclick="clearExportSelection()">ไม่เลือกทั้งหมด</button>
    </div>
-   <div class="export-selection-list">
-    ${pool.map(x=>`<label class="export-selection-row"><input type="checkbox" ${EX_SELECTED.has(x.a.id)?"checked":""} onchange="toggleExportAsset('${x.a.id}',this.checked)">
-      <span><b>${esc(x.a.name||"ไม่ระบุรายการ")}</b><small>${esc(x.a.no||"รอออกเลข")} · ${esc(B(x.r.bid).code||"")} · ชั้น ${esc(FL(x.r.fid).no||"")} · ห้อง ${esc(x.r.code||"")}</small></span></label>`).join("")||'<div class="chart-empty" style="height:80px">ไม่พบรายการตามตัวกรอง</div>'}
+   <div style="margin-top:8px">
+    <input id="ex_pick_q" value="${esc(EX_PICK_Q)}" placeholder="ค้นหาชื่อครุภัณฑ์..." oninput="setExportPickQuery(this.value)">
    </div>
+   <div id="exportSelectedSummary" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px"></div>
+   <div id="exportSelectionList" class="export-selection-list" style="max-height:420px"></div>
   </div>
   <div class="export-order-box"><b style="font-size:13px;color:#1e3a8a">เลือกคอลัมน์และกำหนดลำดับ</b>
    <div class="export-note">ติ๊กข้อมูลที่ต้องการ และใช้ ▲ / ▼ เพื่อกำหนดก่อน–หลัง โดย “ที่” อยู่หน้าสุดเสมอ</div>
    <div class="export-order-list">${EXPORT_ORDER.map((key,i)=>{const f=EXPORT_FIELDS.find(x=>x.key===key);return `<div class="export-order-item"><span class="ord">${i+1}</span>
-    <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="c_${key}" ${EXPORT_COLS[key]?"checked":""}> ${esc(f.label)}</label>
+    <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="c_${key}" ${EXPORT_COLS[key]?"checked":""} onchange="syncExportColsFromUI()"> ${esc(f.label)}</label>
     <button type="button" ${i===0?"disabled":""} onclick="moveExportCol('${key}',-1)">▲</button><button type="button" ${i===EXPORT_ORDER.length-1?"disabled":""} onclick="moveExportCol('${key}',1)">▼</button></div>`}).join("")}</div>
   </div>
   <div style="margin-top:14px"><button class="btn" onclick="execExport()">แสดงตัวอย่าง / สั่งพิมพ์ (A4)</button></div>
  </div><div id="a4box"></div>`;
- updateExportSelectionStatus();setPrintPageStyle();
+ renderExportSelectionPanel();updateExportSelectionStatus();setPrintPageStyle();
 }
 function execExport(){
  EXPORT_FIELDS.forEach(f=>{const el=document.getElementById("c_"+f.key);EXPORT_COLS[f.key]=!!(el&&el.checked);});
