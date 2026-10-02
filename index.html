@@ -194,9 +194,9 @@ const pageAllowed=k=>isSuper()||!!(DB.perms[ME?.role]?.pages?.[k]);
 const MENU=[
  ["dash","ภาพรวม (Dashboard)",()=>pageAllowed("dash")],["plan","ผังอาคาร/ปักหมุดห้อง",()=>pageAllowed("plan")],["floor","ข้อมูล/รายละเอียด",()=>pageAllowed("floor")],
  ["asset","ตามครุภัณฑ์",()=>pageAllowed("asset")],["master","ข้อมูลหลัก",()=>pageAllowed("master")&&canAnyMaster()],["print","Export",()=>pageAllowed("print")],
- ["log","ประวัติการใช้งาน",()=>pageAllowed("log")&&["superadmin","bldadmin","catadmin"].includes(RL())],
- ["user","ผู้ใช้งาน",()=>pageAllowed("user")&&(isSuper()||pv("room","a")||pv("room","e"))],["perm","สิทธิ์การเข้าถึง",()=>pageAllowed("perm")&&isSuper()],
- ["data","นำเข้าข้อมูล",()=>pageAllowed("data")&&["superadmin","bldadmin","catadmin"].includes(RL())]
+ ["log","ประวัติการใช้งาน",()=>["superadmin","bldadmin","catadmin"].includes(RL())&&pageAllowed("log")],
+ ["user","ผู้ใช้งาน",()=>pageAllowed("user")&&(isSuper()||pv("room","a")||pv("room","e"))],["perm","สิทธิ์การเข้าถึง",()=>isSuper()&&pageAllowed("perm")],
+ ["data","นำเข้าข้อมูล",()=>["superadmin","bldadmin","catadmin"].includes(RL())&&pageAllowed("data")]
 ];
 const VIEWS={dash:()=>vDash(),plan:()=>vPlan(),floor:()=>vFloor(),asset:()=>vAsset(),
  master:()=>vMaster(),print:()=>vPrint(),log:()=>vLog(),user:()=>vUser(),perm:()=>vPerm(),data:()=>vData()};
@@ -331,11 +331,20 @@ async function loadAllOnce(){
  const lg=await dbf.collection("logs").orderBy("t","desc").limit(500).get();
  DB.logs=lg.docs.map(d=>({id:d.id,...d.data()}));}
 
-function normalizePerms(){
+function normalizePerms(src){
+ const source=src&&typeof src==="object"&&!Array.isArray(src)?src:DB.perms;
+ if(src!==DB.perms&&src&&typeof src==="object"&&!Array.isArray(src)){
+  return {
+   ...DEFAULT_PERMS[PT||"viewer"],
+   ...source,
+   pages:Object.assign({},DEFAULT_PAGE_PERMS[PT||"viewer"]||{},source.pages||{})
+  };
+ }
  Object.keys(DEFAULT_PERMS).forEach(r=>{
   const base=DB.perms[r]||DEFAULT_PERMS[r];
   DB.perms[r]={...DEFAULT_PERMS[r],...base,pages:Object.assign({},DEFAULT_PAGE_PERMS[r]||{},base.pages||{})};
  });
+ return DB.perms;
 }
 
 function attachListeners(){
@@ -482,10 +491,16 @@ function renderNav(){
  nav.innerHTML=MENU.filter(m=>m[2]()).map(m=>`<button class="${TAB===m[0]?'on':''}" onclick="go('${m[0]}')">${m[1]}</button>`).join("");}
 function go(t){
  if(typeof closeSidePanel==="function")closeSidePanel();
- const m=MENU.find(x=>x[0]===t);
- if(!m||!m[2]())t="dash";
- TAB=t;renderNav();
- if(VIEWS[TAB])VIEWS[TAB]();else VIEWS.dash();}
+ try{
+  const m=MENU.find(x=>x[0]===t);
+  if(!m||!m[2]())t="dash";
+  TAB=t;renderNav();
+  if(VIEWS[TAB])VIEWS[TAB]();else VIEWS.dash();
+ }catch(e){
+  console.error("เปิดหน้า "+t+" ไม่สำเร็จ",e);
+  view.innerHTML=`<div class="card" style="border-left:4px solid #dc2626"><b style="color:#991b1b">ไม่สามารถเปิดหน้านี้ได้</b><p style="margin-top:6px;color:#64748b;font-size:12px">${esc(e.message||"เกิดข้อผิดพลาด")}</p></div>`;
+ }
+}
 
 /* ============================================================
    ส่วนที่ 7 : Dashboard + ฟิลเตอร์
