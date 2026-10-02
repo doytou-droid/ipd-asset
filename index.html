@@ -71,16 +71,30 @@ img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px s
 .sp-body{padding:16px;overflow:auto;width:100%;margin-top:50px}
 
 /* สไตล์เฉพาะหน้า Export A4 */
-.a4sheet{width:210mm;min-height:297mm;padding:15mm;margin:20px auto;background:#fff;box-shadow:0 0 10px rgba(0,0,0,.15);position:relative;font-size:11.5px}
+.a4sheet{width:210mm;min-height:297mm;padding:15mm;margin:20px auto;background:#fff;box-shadow:0 0 10px rgba(0,0,0,.15);position:relative;display:flex;flex-direction:column;font-size:11.5px}
 .a4sheet table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
 .a4sheet th,.a4sheet td{border:1px solid #475569;padding:5px 6px}
 .a4sheet th{background:#f1f5f9}
-.footer-page{position:absolute;bottom:15mm;left:15mm;right:15mm;display:flex;justify-content:space-between;font-size:11px;color:#64748b}
+.footer-page{position:static;margin-top:14mm;padding-top:4mm;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;gap:12px;font-size:11px;color:#64748b;flex-shrink:0}
+.export-order-box{border:1px solid #dbe3ef;border-radius:10px;background:#f8fafc;padding:10px;margin-top:10px}
+.export-order-list{display:grid;grid-template-columns:repeat(2,minmax(260px,1fr));gap:6px 10px;margin-top:8px}
+.export-order-item{display:grid;grid-template-columns:24px 1fr auto auto;align-items:center;gap:7px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:6px 8px;font-size:12px}
+.export-order-item .ord{font-size:11px;color:#94a3b8;text-align:center}
+.export-order-item button{padding:3px 7px;font-size:11px;background:#e2e8f0;color:#334155}
+.export-order-item button:disabled{opacity:.35;cursor:not-allowed}
+.export-order-item input{width:16px;height:16px;margin:0}
+.export-group{background:#e0ecff !important;color:#173b82;font-weight:700;border:1px solid #9fc0ff !important}
 
 @media print{
   body{background:#fff !important}
   header,nav,.noprint{display:none !important}
-  .a4sheet{width:100% !important;min-height:auto !important;padding:0 !important;margin:0 !important;box-shadow:none !important;page-break-after:always}
+  .a4sheet{width:100% !important;margin:0 !important;box-shadow:none !important;page-break-after:always}
+  .a4sheet.portrait{min-height:277mm !important}
+  .a4sheet.landscape{min-height:196mm !important}
+  .a4sheet table thead{display:table-header-group}
+  .a4sheet tr{break-inside:avoid;page-break-inside:avoid}
+  .footer-page{position:static !important;margin-top:8mm !important;break-inside:avoid;page-break-inside:avoid}
+  .export-group{break-after:avoid;page-break-after:avoid}
   @page{size:A4;margin:10mm}
 }
 @media(max-width:850px){.g2,.g3,.g4,.g5{grid-template-columns:1fr}}
@@ -94,7 +108,6 @@ img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px s
 .a4sheet.portrait{width:210mm;min-height:297mm;padding:15mm}.a4sheet.landscape{width:297mm;min-height:210mm;padding:10mm;font-size:10.2px}.a4sheet.landscape table{font-size:9.7px}.a4sheet.portrait .export-thumb{width:22mm;height:16mm}.a4sheet.landscape .export-thumb{width:28mm;height:20mm}.export-thumb{display:block;object-fit:cover;border:1px solid #cbd5e1;border-radius:3px}
 .export-option{display:flex;align-items:center;gap:5px;font-size:12px;color:#334155}.export-note{font-size:11px;color:#64748b;background:#f8fafc;border-radius:8px;padding:7px 9px;margin-top:8px}
 .import-card{border:1px solid #e2e8f0;border-radius:12px;padding:14px;background:#fff;height:100%}.import-card h3{font-size:14px;color:#1e3a8a;margin-bottom:5px}.import-card p{font-size:11px;color:#64748b;line-height:1.6;min-height:38px}.import-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.import-count{font-size:11px;color:#0f766e;background:#ecfdf5;display:inline-block;padding:3px 8px;border-radius:20px}
-.viewer-login{margin-top:10px;width:100%;border:1px dashed #94a3b8;background:#f8fafc;color:#334155}.viewer-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:20px;background:#f1f5f9;color:#475569;font-size:11px}
 
 </style>
 </head>
@@ -396,7 +409,6 @@ function renderAuth(){
    <div class="fld"><label>อีเมล (${EMAIL_DOMAIN})</label><input id="li_em" type="email" placeholder="you${EMAIL_DOMAIN}"></div>
    <div class="fld"><label>รหัสผ่าน</label><input id="li_pw" type="password" placeholder="••••"></div>
    <button class="btn" style="width:100%;padding:11px" onclick="doLogin()">เข้าสู่ระบบ</button>
-   <button class="viewer-login" style="padding:10px" onclick="doViewerLogin()">👁️ เข้าใช้งานในฐานะ “ผู้ดู” — ไม่ต้องใช้อีเมล</button>
    <p id="li_err" style="color:#dc2626;font-size:12px;margin-top:8px"></p>
    <div style="display:flex;justify-content:space-between;margin-top:14px">
     <span class="authlink" onclick="AUTHVIEW='reg';renderAuth()">สมัครเข้าใช้บริการ</span>
@@ -1087,18 +1099,47 @@ async function bulkDel(col){
  }catch(e){alert("ลบไม่สำเร็จ (อาจมีข้อมูลลูกใช้งานอยู่): "+e.message);}}
 
 /* ============================================================
-   ส่วนที่ 13 : Export (A4 portrait / landscape + รูปครุภัณฑ์ขนาดย่อ)
+   ส่วนที่ 13 : Export (A4 portrait / landscape + รูปครุภัณฑ์ขนาดย่อ + จัดลำดับคอลัมน์ + ตามประเภท/รายการ)
    ============================================================ */
+const EXPORT_FIELDS=[
+ {key:"img",label:"รูปครุภัณฑ์ขนาดย่อ"},
+ {key:"no",label:"เลขครุภัณฑ์"},
+ {key:"name",label:"รายการ"},
+ {key:"spec",label:"คุณลักษณะ"},
+ {key:"brand",label:"ยี่ห้อ/รุ่น"},
+ {key:"qty",label:"จำนวน"},
+ {key:"price",label:"ราคา/หน่วย"},
+ {key:"total",label:"รวม"},
+ {key:"buy",label:"วันที่ซื้อ"},
+ {key:"vendor",label:"ผู้ขาย"},
+ {key:"floor",label:"ชั้น"},
+ {key:"room",label:"ห้อง"},
+ {key:"dept",label:"หน่วยงาน"},
+ {key:"status",label:"สถานะ"}
+];
 let EXPORT_COLS={img:false,no:true,name:true,spec:false,brand:true,qty:true,price:true,total:true,buy:true,vendor:false,dept:true,status:true,floor:true,room:true};
-let EX_B="",EX_F="",EX_R="",EX_D="",EXPORT_ORIENT="portrait";
+let EXPORT_ORDER=EXPORT_FIELDS.map(x=>x.key);
+let EX_B="",EX_F="",EX_R="",EX_D="",EXPORT_ORIENT="portrait",EX_VIEW="item";
 
-function setExportOrientation(v){EXPORT_ORIENT=v||"portrait";vPrint();}
+function syncExportColsFromUI(){
+ EXPORT_FIELDS.forEach(f=>{const el=document.getElementById("c_"+f.key);if(el)EXPORT_COLS[f.key]=!!el.checked;});
+}
+function setExportOrientation(v){syncExportColsFromUI();EXPORT_ORIENT=v||"portrait";vPrint();}
+function setExportView(v){syncExportColsFromUI();EX_VIEW=v||"item";vPrint();}
+function moveExportCol(key,dir){
+ syncExportColsFromUI();
+ const i=EXPORT_ORDER.indexOf(key),j=i+dir;
+ if(i<0||j<0||j>=EXPORT_ORDER.length)return;
+ [EXPORT_ORDER[i],EXPORT_ORDER[j]]=[EXPORT_ORDER[j],EXPORT_ORDER[i]];
+ vPrint();
+}
 function setPrintPageStyle(){
  let st=document.getElementById("printPageStyle");
  if(!st){st=document.createElement("style");st.id="printPageStyle";document.head.appendChild(st);}
  st.textContent=`@media print{@page{size:${EXPORT_ORIENT==="landscape"?"A4 landscape":"A4 portrait"};margin:${EXPORT_ORIENT==="landscape"?"7mm":"10mm"}}`;
 }
 function vPrint(){
+ syncExportColsFromUI();
  const bOpts=sortedBuildings(DB.buildings.filter(b=>inB(b.id)));
  if(!EX_B&&bOpts.length)EX_B=bOpts[0].id;
  const fOpts=sortedFloors(DB.floors.filter(f=>f.bid===EX_B&&inF(f.id)));
@@ -1106,8 +1147,9 @@ function vPrint(){
  const rOpts=deptRoomOptions(EX_D,EX_B,EX_F);
  if(EX_R&&!rOpts.find(x=>x.id===EX_R))EX_R="";
  const dOpts=sortedDepts(DB.depts);
+ const activeFields=EXPORT_ORDER.filter(k=>EXPORT_FIELDS.find(f=>f.key===k && EXPORT_COLS[k]));
  view.innerHTML=`<div class="card noprint"><b>เครื่องมือ Export / พิมพ์รายงาน A4</b>
-  <div class="hint" style="margin-top:8px">ตัวเลือกตำแหน่งตามที่กำหนด: อาคาร → ชั้น → ห้อง → หน่วยงาน</div>
+  <div class="hint" style="margin-top:8px">ตัวเลือกตำแหน่ง: อาคาร → ชั้น → ห้อง → หน่วยงาน</div>
   <div class="row g4" style="margin-top:10px">
    <div><label>1. เลือกอาคาร (บังคับ)</label>
     <select id="ex_b" onchange="EX_B=this.value;EX_F='';EX_R='';vPrint()">
@@ -1130,6 +1172,12 @@ function vPrint(){
     </select></div>
   </div>
   <div class="row g3" style="margin-top:10px">
+   <div><label>รูปแบบรายงาน</label>
+    <select id="ex_view" onchange="setExportView(this.value)">
+      <option value="item" ${EX_VIEW==="item"?"selected":""}>ตามรายการครุภัณฑ์</option>
+      <option value="category" ${EX_VIEW==="category"?"selected":""}>ตามประเภทครุภัณฑ์</option>
+    </select>
+   </div>
    <div><label>การวางหน้ากระดาษ</label>
     <div class="orientation-picker">
       <label><input type="radio" name="ex_orientation" value="portrait" ${EXPORT_ORIENT==="portrait"?"checked":""} onchange="setExportOrientation(this.value)"> แนวตั้ง A4</label>
@@ -1139,79 +1187,52 @@ function vPrint(){
    <div><label>ตัวเลือกรูปภาพ</label>
     <label class="checkline"><input type="checkbox" id="c_img" ${EXPORT_COLS.img?"checked":""}> รูปครุภัณฑ์ขนาดย่อ</label>
    </div>
-   <div><label>คอลัมน์รายงาน</label>
-    <span style="font-size:12px;color:#64748b">เลือกเฉพาะข้อมูลที่จำเป็น เพื่อลดความแน่นของตาราง</span>
-   </div>
   </div>
-  <div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;font-size:13px">
-   <label class="checkline"><input type="checkbox" id="c_no" ${EXPORT_COLS.no?"checked":""}> เลขครุภัณฑ์</label>
-   <label class="checkline"><input type="checkbox" id="c_name" ${EXPORT_COLS.name?"checked":""}> รายการ</label>
-   <label class="checkline"><input type="checkbox" id="c_spec" ${EXPORT_COLS.spec?"checked":""}> คุณลักษณะ</label>
-   <label class="checkline"><input type="checkbox" id="c_brand" ${EXPORT_COLS.brand?"checked":""}> ยี่ห้อ/รุ่น</label>
-   <label class="checkline"><input type="checkbox" id="c_qty" ${EXPORT_COLS.qty?"checked":""}> จำนวน</label>
-   <label class="checkline"><input type="checkbox" id="c_price" ${EXPORT_COLS.price?"checked":""}> ราคา/หน่วย</label>
-   <label class="checkline"><input type="checkbox" id="c_total" ${EXPORT_COLS.total?"checked":""}> รวม</label>
-   <label class="checkline"><input type="checkbox" id="c_buy" ${EXPORT_COLS.buy?"checked":""}> วันที่ซื้อ</label>
-   <label class="checkline"><input type="checkbox" id="c_vendor" ${EXPORT_COLS.vendor?"checked":""}> ผู้ขาย</label>
-   <label class="checkline"><input type="checkbox" id="c_dept" ${EXPORT_COLS.dept?"checked":""}> หน่วยงาน</label>
-   <label class="checkline"><input type="checkbox" id="c_status" ${EXPORT_COLS.status?"checked":""}> สถานะ</label>
-   <label class="checkline"><input type="checkbox" id="c_floor" ${EXPORT_COLS.floor?"checked":""}> ชั้น</label>
-   <label class="checkline"><input type="checkbox" id="c_room" ${EXPORT_COLS.room?"checked":""}> ห้อง</label>
+  <div class="export-order-box">
+   <b style="font-size:13px;color:#1e3a8a">เลือกคอลัมน์และกำหนดลำดับที่ต้องการพิมพ์</b>
+   <div class="export-note">ติ๊กเลือกข้อมูลที่ต้องการ และใช้ ▲ / ▼ เพื่อกำหนดว่าอะไรจะขึ้นก่อน–หลังในตาราง โดยคอลัมน์ “ที่” จะอยู่ด้านหน้าสุดเสมอ</div>
+   <div class="export-order-list">
+    ${EXPORT_ORDER.map((key,i)=>{const f=EXPORT_FIELDS.find(x=>x.key===key);return `<div class="export-order-item">
+      <span class="ord">${i+1}</span>
+      <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="c_${key}" ${EXPORT_COLS[key]?"checked":""}> ${esc(f.label)}</label>
+      <button type="button" ${i===0?"disabled":""} onclick="moveExportCol('${key}',-1)">▲</button>
+      <button type="button" ${i===EXPORT_ORDER.length-1?"disabled":""} onclick="moveExportCol('${key}',1)">▼</button>
+     </div>`;}).join("")}
+   </div>
   </div>
   <div style="margin-top:14px"><button class="btn" onclick="execExport()">แสดงตัวอย่าง / สั่งพิมพ์ (A4)</button></div></div>
   <div id="a4box"></div>`;
  setPrintPageStyle();
 }
 function execExport(){
- EXPORT_COLS={
-  img:c_img.checked,no:c_no.checked,name:c_name.checked,spec:c_spec.checked,brand:c_brand.checked,
-  qty:c_qty.checked,price:c_price.checked,total:c_total.checked,buy:c_buy.checked,vendor:c_vendor.checked,
-  dept:c_dept.checked,status:c_status.checked,floor:c_floor.checked,room:c_room.checked};
+ EXPORT_FIELDS.forEach(f=>{const el=document.getElementById("c_"+f.key);EXPORT_COLS[f.key]=!!(el&&el.checked);});
  const rId=EX_R,fId=EX_F,bId=EX_B;
  if(rId)printRoomA4(rId);
  else if(fId)printFloorA4(fId);
  else if(bId)printBldA4(bId);
  else alert("กรุณาเลือกอาคาร");
 }
-function exportColCount(){
- return 1+Object.values(EXPORT_COLS).filter(Boolean).length;
-}
+function exportColCount(){return 1+EXPORT_ORDER.filter(k=>EXPORT_COLS[k]).length;}
 function buildThHeaders(){
- let h=`<tr><th>ที่</th>`;
- if(EXPORT_COLS.img)h+=`<th class="imgcol">รูป</th>`;
- if(EXPORT_COLS.no)h+=`<th>เลขครุภัณฑ์</th>`;
- if(EXPORT_COLS.name)h+=`<th>รายการ</th>`;
- if(EXPORT_COLS.spec)h+=`<th>คุณลักษณะ</th>`;
- if(EXPORT_COLS.brand)h+=`<th>ยี่ห้อ/รุ่น</th>`;
- if(EXPORT_COLS.qty)h+=`<th style="text-align:center">จน.</th>`;
- if(EXPORT_COLS.price)h+=`<th style="text-align:right">ราคา/หน่วย</th>`;
- if(EXPORT_COLS.total)h+=`<th style="text-align:right">รวม</th>`;
- if(EXPORT_COLS.buy)h+=`<th>วันที่ซื้อ</th>`;
- if(EXPORT_COLS.vendor)h+=`<th>ผู้ขาย</th>`;
- if(EXPORT_COLS.floor)h+=`<th>ชั้น</th>`;
- if(EXPORT_COLS.room)h+=`<th>ห้อง</th>`;
- if(EXPORT_COLS.dept)h+=`<th>หน่วยงาน</th>`;
- if(EXPORT_COLS.status)h+=`<th>สถานะ</th>`;
- return h+`</tr>`;
+ const heads={
+  img:`<th class="imgcol">รูป</th>`,no:`<th>เลขครุภัณฑ์</th>`,name:`<th>รายการ</th>`,spec:`<th>คุณลักษณะ</th>`,
+  brand:`<th>ยี่ห้อ/รุ่น</th>`,qty:`<th style="text-align:center">จน.</th>`,price:`<th style="text-align:right">ราคา/หน่วย</th>`,
+  total:`<th style="text-align:right">รวม</th>`,buy:`<th>วันที่ซื้อ</th>`,vendor:`<th>ผู้ขาย</th>`,floor:`<th>ชั้น</th>`,
+  room:`<th>ห้อง</th>`,dept:`<th>หน่วยงาน</th>`,status:`<th>สถานะ</th>`};
+ return `<tr><th>ที่</th>`+EXPORT_ORDER.filter(k=>EXPORT_COLS[k]).map(k=>heads[k]).join("")+`</tr>`;
 }
-function buildTrRows(list){
+function buildTrRows(list,startNo=1){
+ const cells={
+  img:a=>`<td class="imgcol">${a.img?`<img class="export-thumb" src="${esc(a.img)}">`:"—"}</td>`,
+  no:a=>`<td>${esc(a.no)}</td>`,name:a=>`<td><b>${esc(a.name)}</b></td>`,spec:a=>`<td>${esc(a.spec)}</td>`,
+  brand:a=>`<td>${esc(a.brand)} ${esc(a.model)}</td>`,qty:a=>`<td style="text-align:center">${a.qty||1}</td>`,
+  price:a=>`<td style="text-align:right">${money(a.price)}</td>`,total:a=>`<td style="text-align:right">${money((+a.price||0)*(+a.qty||1))}</td>`,
+  buy:a=>`<td>${esc(a.buy)}</td>`,vendor:a=>`<td>${esc(a.vendor)}</td>`,floor:(a,r)=>`<td>${esc(FL(r.fid).no)}</td>`,
+  room:(a,r)=>`<td>${esc(r.code)}</td>`,dept:(a,r)=>`<td>${esc(DP(a.rdept).name||DP(r.dept).name||"")}</td>`,status:a=>`<td>${esc(a.status)}</td>`};
  return list.map((item,i)=>{
   const a=item.a||item,r=item.r||RM(a.room);
-  let res=`<tr><td style="text-align:center">${i+1}</td>`;
-  if(EXPORT_COLS.img)res+=`<td class="imgcol">${a.img?`<img class="export-thumb" src="${esc(a.img)}">`:"—"}</td>`;
-  if(EXPORT_COLS.no)res+=`<td>${esc(a.no)}</td>`;
-  if(EXPORT_COLS.name)res+=`<td><b>${esc(a.name)}</b></td>`;
-  if(EXPORT_COLS.spec)res+=`<td>${esc(a.spec)}</td>`;
-  if(EXPORT_COLS.brand)res+=`<td>${esc(a.brand)} ${esc(a.model)}</td>`;
-  if(EXPORT_COLS.qty)res+=`<td style="text-align:center">${a.qty||1}</td>`;
-  if(EXPORT_COLS.price)res+=`<td style="text-align:right">${money(a.price)}</td>`;
-  if(EXPORT_COLS.total)res+=`<td style="text-align:right">${money((+a.price||0)*(+a.qty||1))}</td>`;
-  if(EXPORT_COLS.buy)res+=`<td>${esc(a.buy)}</td>`;
-  if(EXPORT_COLS.vendor)res+=`<td>${esc(a.vendor)}</td>`;
-  if(EXPORT_COLS.floor)res+=`<td>${esc(FL(r.fid).no)}</td>`;
-  if(EXPORT_COLS.room)res+=`<td>${esc(r.code)}</td>`;
-  if(EXPORT_COLS.dept)res+=`<td>${esc(DP(a.rdept).name||DP(r.dept).name||"")}</td>`;
-  if(EXPORT_COLS.status)res+=`<td>${esc(a.status)}</td>`;
+  let res=`<tr><td style="text-align:center">${startNo+i}</td>`;
+  for(const key of EXPORT_ORDER){if(!EXPORT_COLS[key])continue;res+=cells[key]?cells[key](a,r):"";}
   return res+`</tr>`;
  }).join("");
 }
@@ -1223,6 +1244,19 @@ function exportAssetsForRooms(roomIds){
 function exportTotalRow(total,label){
  const n=exportColCount();
  return `<tr><td colspan="${Math.max(1,n-1)}" style="text-align:right"><b>${esc(label)}</b></td><td style="text-align:right"><b>${money(total)} บาท</b></td></tr>`;
+}
+function buildExportTable(src,totalLabel){
+ const total=src.reduce((s,x)=>s+(+x.a.price||0)*(+x.a.qty||1),0);
+ if(EX_VIEW!=="category")return `<table>${buildThHeaders()}${buildTrRows(src)}${exportTotalRow(total,totalLabel)}</table>`;
+ const groups={};
+ src.forEach(x=>{const code=x.a.cat||"";(groups[code]||(groups[code]=[])).push(x);});
+ const cols=exportColCount();let body=buildThHeaders();let no=1;
+ Object.keys(groups).sort((a,b)=>a.localeCompare(b,"th")).forEach(code=>{
+   const cat=CT(code);body+=`<tr><td colspan="${cols}" class="export-group">ประเภท ${esc(code)} · ${esc(cat.name||"ไม่ระบุประเภท")}</td></tr>`;
+   body+=buildTrRows(groups[code],no);no+=groups[code].length;
+ });
+ body+=exportTotalRow(total,totalLabel);
+ return `<table>${body}</table>`;
 }
 function paperA4(contentHtml){
  if(TAB!=="print"){TAB="print";renderNav();}
@@ -1237,30 +1271,24 @@ function paperA4(contentHtml){
  },60);
 }
 function printRoomA4(id){
- const r=RM(id),src=exportAssetsForRooms([id]),as=src.map(x=>x.a);
- const tot=as.reduce((s,a)=>s+(+a.price||0)*(+a.qty||1),0);
+ const r=RM(id),src=exportAssetsForRooms([id]);
  const head=`<div style="text-align:center;margin-bottom:10px"><h2>แบบสำรวจ/ทะเบียนครุภัณฑ์</h2>
   <h3>โรงพยาบาลสุทธาเวช คณะแพทยศาสตร์ มหาวิทยาลัยมหาสารคาม</h3>
   <p>${esc(B(r.bid).name)} · ชั้น ${esc(FL(r.fid).no)} · ${esc(r.code)} ${esc(r.name)} · ${esc(DP(r.dept).name||"-")}</p></div>`;
- const table=`<table>${buildThHeaders()}${buildTrRows(src)}${exportTotalRow(tot,"รวมมูลค่าทั้งสิ้น")}</table>`;
- paperA4(`<div class="a4sheet ${EXPORT_ORIENT}">${head}${table}
+ paperA4(`<div class="a4sheet ${EXPORT_ORIENT}">${head}${buildExportTable(src,"รวมมูลค่าทั้งสิ้น")}
   <div class="footer-page"><span>พิมพ์เมื่อ: ${new Date().toLocaleString("th-TH")}</span><span>หน้า 1/1</span></div></div>`);
 }
 function printFloorA4(fid){
  const f=FL(fid),rms=DB.rooms.filter(r=>r.fid===fid),src=exportAssetsForRooms(rms.map(r=>r.id));
- const tot=src.reduce((s,x)=>s+(+x.a.price||0)*(+x.a.qty||1),0);
  const head=`<div style="text-align:center;margin-bottom:10px"><h2>แบบสำรวจ/ทะเบียนครุภัณฑ์ (รายชั้น)</h2>
   <h3>${esc(B(f.bid).name)} — ${esc(f.no)} ${esc(f.name)}</h3></div>`;
- const table=`<table>${buildThHeaders()}${buildTrRows(src)}${exportTotalRow(tot,"รวมมูลค่าทั้งชั้น")}</table>`;
- paperA4(`<div class="a4sheet ${EXPORT_ORIENT}">${head}${table}
+ paperA4(`<div class="a4sheet ${EXPORT_ORIENT}">${head}${buildExportTable(src,"รวมมูลค่าทั้งชั้น")}
   <div class="footer-page"><span>พิมพ์เมื่อ: ${new Date().toLocaleString("th-TH")}</span><span>หน้า 1/1</span></div></div>`);
 }
 function printBldA4(bid){
  const b=B(bid),rms=DB.rooms.filter(r=>DB.floors.some(f=>f.bid===bid&&f.id===r.fid)),src=exportAssetsForRooms(rms.map(r=>r.id));
- const tot=src.reduce((s,x)=>s+(+x.a.price||0)*(+x.a.qty||1),0);
  const head=`<div style="text-align:center;margin-bottom:10px"><h2>แบบสำรวจ/ทะเบียนครุภัณฑ์ (ทั้งอาคาร)</h2><h3>${esc(b.name)}</h3></div>`;
- const table=`<table>${buildThHeaders()}${buildTrRows(src)}${exportTotalRow(tot,"รวมมูลค่าทั้งอาคาร")}</table>`;
- paperA4(`<div class="a4sheet ${EXPORT_ORIENT}">${head}${table}
+ paperA4(`<div class="a4sheet ${EXPORT_ORIENT}">${head}${buildExportTable(src,"รวมมูลค่าทั้งอาคาร")}
   <div class="footer-page"><span>พิมพ์เมื่อ: ${new Date().toLocaleString("th-TH")}</span><span>หน้า 1/1</span></div></div>`);
 }
 
