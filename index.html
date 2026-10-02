@@ -68,7 +68,7 @@ img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px s
  display:flex;align-items:center;justify-content:center;border-radius:10px 0 0 10px;cursor:pointer;font-size:15px;box-shadow:-3px 0 10px rgba(0,0,0,.2)}
 .sp-body{padding:16px;overflow:auto;width:100%;margin-top:50px}
 
-/* สไตล์เฉพาะสำหรับหน้า Export A4 */
+/* สไตล์เฉพาะหน้า Export A4 */
 .a4sheet{width:210mm;min-height:297mm;padding:15mm;margin:20px auto;background:#fff;box-shadow:0 0 10px rgba(0,0,0,.15);position:relative;font-size:11.5px}
 .a4sheet table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
 .a4sheet th,.a4sheet td{border:1px solid #475569;padding:5px 6px}
@@ -544,7 +544,7 @@ function vDash(){
     ||'<tr><td colspan=3 style="color:#94a3b8">ไม่มีรายการ</td></tr>'}</table></div></div>`;}
 
 /* ============================================================
-   ส่วนที่ 8 : ผังอาคาร + ปักหมุดห้อง + แถบเลื่อนด้านขวา (มีรูปย่อ)
+   ส่วนที่ 8 : ผังอาคาร + ปักหมุดห้อง + แถบเลื่อนด้านขวา
    ============================================================ */
 let PL={bid:"",fid:"",pin:false,room:""}, SIDE_PINNED=false, SIDE_TIMER=null;
 function vPlan(){
@@ -647,7 +647,7 @@ function renderSide(roomId){
    <button class="btn-s btn-sm" onclick="printRoom('${r.id}')">Export A4</button></div>`;}
 
 /* ============================================================
-   ส่วนที่ 9 : ข้อมูล/รายละเอียด (ยุบ/ขยายครุภัณฑ์รายห้องได้)
+   ส่วนที่ 9 : ข้อมูล/รายละเอียด
    ============================================================ */
 let openFl={}, openRoomAssets={};
 function vFloor(){view.innerHTML=filterBar()+'<div id="fl"></div>';flList();}
@@ -834,7 +834,7 @@ function assetView(id){
   <div style="text-align:right;margin-top:12px"><button class="btn" onclick="mc()">ปิด</button></div>`);}
 
 /* ============================================================
-   ส่วนที่ 12 : ข้อมูลหลัก (เพิ่มส่วนบริหาร + ฟิลเตอร์ซ้อนชั้น + ลบหลายรายการ)
+   ส่วนที่ 12 : ข้อมูลหลัก
    ============================================================ */
 let MT="mg";
 function vMaster(){
@@ -1026,18 +1026,32 @@ async function bulkDel(col){
  }catch(e){alert("ลบไม่สำเร็จ (อาจมีข้อมูลลูกใช้งานอยู่): "+e.message);}}
 
 /* ============================================================
-   ส่วนที่ 13 : Export (ฟอร์ม A4 สมบูรณ์ ซ่อนเงา/ปุ่มตอนพิมพ์)
+   ส่วนที่ 13 : Export (ฟอร์ม A4 พร้อมฟิลเตอร์เรียงลำดับ อาคาร -> ชั้น -> ห้อง)
    ============================================================ */
 let EXPORT_COLS={no:true,name:true,spec:true,brand:true,qty:true,price:true,total:true,buy:true,vendor:true,dept:true,status:true};
+let EX_B="", EX_F="", EX_R="";
 function vPrint(){
- const bOpts=DB.buildings.map(b=>[b.id,b.name]);
- const fOpts=DB.floors.filter(f=>inB(f.bid)).map(f=>[f.id,B(f.bid).code+" · "+f.name]);
- const rOpts=visRooms().map(r=>[r.id,B(r.bid).code+" / "+FL(r.fid).no+" / "+r.code+" "+r.name]);
- view.innerHTML=`<div class="card noprint"><b>เครื่องมือ Export / พิมพ์รายงาน A4</b>
+ const bOpts=DB.buildings.filter(b=>inB(b.id)).map(b=>[b.id,b.name]);
+ if(!EX_B&&bOpts.length)EX_B=bOpts[0][0];
+ const fOpts=DB.floors.filter(f=>f.bid===EX_B&&inF(f.id));
+ if(EX_F&&!fOpts.find(x=>x.id===EX_F))EX_F="";
+ const rOpts=visRooms().filter(r=>r.bid===EX_B&&(!EX_F||r.fid===EX_F));
+ if(EX_R&&!rOpts.find(x=>x.id===EX_R))EX_R="";
+
+ view.innerHTML=`<div class="card noprint"><b>เครื่องมือ Export / พิมพ์รายงาน A4 (เรียงจากใหญ่ไปเล็ก)</b>
   <div class="row g3" style="margin-top:10px">
-   <div><label>พิมพ์รายห้อง</label><select id="p_room" onchange="p_fl.value='';p_b.value=''"><option value="">-ยังไม่เลือก-</option>${rOpts.map(o=>`<option value="${o[0]}">${esc(o[1])}</option>`).join("")}</select></div>
-   <div><label>พิมพ์ทั้งชั้น</label><select id="p_fl" onchange="p_room.value='';p_b.value=''"><option value="">-ยังไม่เลือก-</option>${fOpts.map(o=>`<option value="${o[0]}">${esc(o[1])}</option>`).join("")}</select></div>
-   <div><label>พิมพ์ทั้งอาคาร</label><select id="p_b" onchange="p_room.value='';p_fl.value=''"><option value="">-ยังไม่เลือก-</option>${bOpts.map(o=>`<option value="${o[0]}">${esc(o[1])}</option>`).join("")}</select></div></div>
+   <div><label>1. เลือกอาคาร (บังคับ)</label>
+    <select id="ex_b" onchange="EX_B=this.value;EX_F='';EX_R='';vPrint()">
+    ${bOpts.map(o=>`<option value="${o[0]}" ${o[0]===EX_B?"selected":""}>${esc(o[1])}</option>`).join("")}</select></div>
+   <div><label>2. เลือกชั้น (เว้นว่าง = ทั้งอาคาร)</label>
+    <select id="ex_f" onchange="EX_F=this.value;EX_R='';vPrint()">
+    <option value="">- ทุกชั้นในอาคารนี้ -</option>
+    ${fOpts.map(o=>`<option value="${o.id}" ${o.id===EX_F?"selected":""}>${esc(o.name)}</option>`).join("")}</select></div>
+   <div><label>3. เลือกห้อง (เว้นว่าง = ทั้งชั้น/อาคาร)</label>
+    <select id="ex_r" onchange="EX_R=this.value">
+    <option value="">- ทุกห้อง -</option>
+    ${rOpts.map(o=>`<option value="${o.id}" ${o.id===EX_R?"selected":""}>${esc(o.code+" "+o.name)}</option>`).join("")}</select></div></div>
+
   <div style="margin-top:12px"><label>เลือกคอลัมน์ที่จะแสดงในตาราง:</label>
    <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px;margin-top:4px">
     <label><input type="checkbox" id="c_no" checked> เลขครุภัณฑ์</label>
@@ -1056,15 +1070,15 @@ function vPrint(){
   <div id="a4box"></div>`;}
 
 function execExport(){
- const rId=p_room.value, fId=p_fl.value, bId=p_b.value;
- if(!rId&&!fId&&!bId)return alert("กรุณาเลือกเป้าหมายที่ต้องการ Export อย่างน้อย 1 ช่อง (รายห้อง, ทั้งชั้น, หรือทั้งอาคาร)");
  EXPORT_COLS={
   no:c_no.checked, name:c_name.checked, spec:c_spec.checked, brand:c_brand.checked,
   qty:c_qty.checked, price:c_price.checked, total:c_total.checked, buy:c_buy.checked,
   vendor:c_vendor.checked, dept:c_dept.checked, status:c_status.checked};
+ const rId=EX_R, fId=EX_F, bId=EX_B;
+ if(!bId)return alert("กรุณาเลือกอาคาร");
  if(rId)printRoomA4(rId);
  else if(fId)printFloorA4(fId);
- else if(bId)printBldA4(bId);}
+ else printBldA4(bId);}
 
 function buildThHeaders(){
  let h=`<tr><th style="width:30px">ที่</th>`;
@@ -1119,8 +1133,8 @@ function printRoomA4(id){
  const table=`<table>${buildThHeaders()}${buildTrRows(as)||'<tr><td colspan="12" style="text-align:center">- ไม่มีรายการ -</td></tr>'}
   <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งสิ้น</b></td><td style="text-align:right" colspan="6"><b>${money(tot)} บาท</b></td></tr></table>`;
  const sign=`<div style="display:flex;justify-content:space-around;margin-top:40px;text-align:center;font-size:12px">
-  <div>ลงชื่อ ....................................................<br>(....................................................)<br>ตำแหน่ง ....................................................</div>
-  <div>ลงชื่อ ....................................................<br>(....................................................)<br>ตำแหน่ง ....................................................</div></div>`;
+  <div>ลงชื่อ ....................................................<br>(....................................................)</div>
+  <div>ลงชื่อ ....................................................<br>(....................................................)</div></div>`;
  paperA4(`<div class="a4sheet">${head}${table}${sign}<div class="footer-page"><span>พิมพ์เมื่อ: ${new Date().toLocaleString("th-TH")}</span><span>หน้า 1/1</span></div></div>`);}
 
 function printFloorA4(fid){
