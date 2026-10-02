@@ -1165,20 +1165,38 @@ function moveExportCol(key,dir){
  [EXPORT_ORDER[i],EXPORT_ORDER[j]]=[EXPORT_ORDER[j],EXPORT_ORDER[i]];vPrint();
 }
 function exportLocationPool(){
- const key=[EX_D,EX_B,EX_F,EX_R].join("|");
- if(EX_POOL_CACHE.key===key&&EX_POOL_CACHE.len===DB.assets.length)return EX_POOL_CACHE.data;
- let src=DB.assets.map(a=>({a,r:RM(a.room)})).filter(x=>x.r.id);
- if(EX_D)src=src.filter(x=>x.r.dept===EX_D||x.a.rdept===EX_D);
- if(EX_B)src=src.filter(x=>x.r.bid===EX_B);
- if(EX_F)src=src.filter(x=>x.r.fid===EX_F);
- if(EX_R)src=src.filter(x=>x.r.id===EX_R);
- src.sort((x,y)=>{
-  const ax=`${B(x.r.bid).code||""}|${FL(x.r.fid).no||""}|${x.r.code||""}|${x.a.name||""}|${x.a.no||""}`;
-  const ay=`${B(y.r.bid).code||""}|${FL(y.r.fid).no||""}|${y.r.code||""}|${y.a.name||""}|${y.a.no||""}`;
-  return naturalSort(ax,ay);
- });
- EX_POOL_CACHE={key,len:DB.assets.length,data:src};
- return src;
+  const key = [EX_D, EX_B, EX_F, EX_R].join("|");
+  if(EX_POOL_CACHE.key === key && EX_POOL_CACHE.len === DB.assets.length){
+    return EX_POOL_CACHE.data;
+  }
+  let src = DB.assets
+    .map(a => ({a, r: RM(a.room)}))
+    .filter(x => x.r.id);
+  if(EX_D){
+    src = src.filter(x => x.r.dept === EX_D || x.a.rdept === EX_D);
+  }
+  /* รวมข้อมูลจากอาคารที่รหัสเดียวกัน เช่น IPD ที่ถูกสร้างซ้ำ */
+  if(EX_B){
+    const sameBuildingIds = equivalentBuildingIds(EX_B);
+    src = src.filter(x => sameBuildingIds.has(x.r.bid));
+  }
+  if(EX_F){
+    src = src.filter(x => x.r.fid === EX_F);
+  }
+  if(EX_R){
+    src = src.filter(x => x.r.id === EX_R);
+  }
+  src.sort((x, y) => {
+    const ax = `${B(x.r.bid).code || ""}|${FL(x.r.fid).no || ""}|${x.r.code || ""}|${x.a.name || ""}|${x.a.no || ""}`;
+    const ay = `${B(y.r.bid).code || ""}|${FL(y.r.fid).no || ""}|${y.r.code || ""}|${y.a.name || ""}|${y.a.no || ""}`;
+    return naturalSort(ax, ay);
+  });
+  EX_POOL_CACHE = {
+    key,
+    len: DB.assets.length,
+    data: src
+  };
+  return src;
 }
 function exportAssetGroups(){
  const groups=new Map();
@@ -1353,7 +1371,13 @@ function vPrint(){
  syncExportColsFromUI();
  const bOpts=deptBuildingOptions(EX_D);
  if(!EX_B&&bOpts.length)EX_B=bOpts[0].id;
- const fOpts=sortedFloors(DB.floors.filter(f=>f.bid===EX_B&&inF(f.id)));
+const exportBuildingIds = equivalentBuildingIds(EX_B);
+
+const fOpts = sortedFloors(
+  DB.floors.filter(
+    f => exportBuildingIds.has(f.bid) && inF(f.id)
+  )
+);
  if(EX_F&&!fOpts.find(x=>x.id===EX_F))EX_F="";
  const rOpts=deptRoomOptions(EX_D,EX_B,EX_F);
  if(EX_R&&!rOpts.find(x=>x.id===EX_R))EX_R="";
@@ -1459,7 +1483,39 @@ function paperA4(contentHtml){
 function reportFooter(count){return `<div class="footer-page"><span>พิมพ์เมื่อ: ${new Date().toLocaleString("th-TH")}</span><span>จำนวนรายการที่พิมพ์: ${count.toLocaleString("th-TH")} รายการ</span></div>`;}
 function printRoomA4(id){const r=RM(id),src=exportAssetsForRooms([id]),head=`<div class="report-head"><h2>แบบสำรวจ/ทะเบียนครุภัณฑ์</h2><h3>โรงพยาบาลสุทธาเวช คณะแพทยศาสตร์ มหาวิทยาลัยมหาสารคาม</h3><p>${esc(B(r.bid).name)} · ชั้น ${esc(FL(r.fid).no)} · ${esc(r.code)} ${esc(r.name)} · ${esc(DP(r.dept).name||"-")}</p></div>`;paperA4(`<div class="a4sheet ${EXPORT_ORIENT}">${head}${buildExportTable(src,"รวมมูลค่าทั้งสิ้น")}${reportFooter(src.length)}</div>`);}
 function printFloorA4(fid){const f=FL(fid),rms=sortedRooms(DB.rooms.filter(r=>r.fid===fid)),src=exportAssetsForRooms(rms.map(r=>r.id)),head=`<div class="report-head"><h2>แบบสำรวจ/ทะเบียนครุภัณฑ์ (รายชั้น)</h2><h3>${esc(B(f.bid).name)} — ${esc(f.no)} ${esc(f.name)}</h3></div>`;paperA4(`<div class="a4sheet ${EXPORT_ORIENT}">${head}${buildExportTable(src,"รวมมูลค่าทั้งชั้น")}${reportFooter(src.length)}</div>`);}
-function printBldA4(bid){const b=B(bid),fls=sortedFloors(DB.floors.filter(f=>f.bid===bid)),roomIds=fls.flatMap(f=>sortedRooms(DB.rooms.filter(r=>r.fid===f.id)).map(r=>r.id)),src=exportAssetsForRooms(roomIds),head=`<div class="report-head"><h2>แบบสำรวจ/ทะเบียนครุภัณฑ์ (ทั้งอาคาร)</h2><h3>${esc(b.name)}</h3></div>`;paperA4(`<div class="a4sheet ${EXPORT_ORIENT}">${head}${buildExportTable(src,"รวมมูลค่าทั้งอาคาร")}${reportFooter(src.length)}</div>`);}
+function printBldA4(bid){function printBldA4(bid){
+  const b = B(bid);
+
+  /* รวมชั้นจากทุกอาคารที่มีรหัสเดียวกัน */
+  const sameBuildingIds = equivalentBuildingIds(bid);
+
+  const fls = sortedFloors(
+    DB.floors.filter(f => sameBuildingIds.has(f.bid))
+  );
+
+  const roomIds = fls.flatMap(f =>
+    sortedRooms(
+      DB.rooms.filter(r => r.fid === f.id)
+    ).map(r => r.id)
+  );
+
+  const src = exportAssetsForRooms(roomIds);
+
+  const head = `
+    <div class="report-head">
+      <h2>แบบสำรวจ/ทะเบียนครุภัณฑ์ (ทั้งอาคาร)</h2>
+      <h3>${esc(b.name)}</h3>
+    </div>
+  `;
+
+  paperA4(`
+    <div class="a4sheet ${EXPORT_ORIENT}">
+      ${head}
+      ${buildExportTable(src, "รวมมูลค่าทั้งอาคาร")}
+      ${reportFooter(src.length)}
+    </div>
+  `);
+}
 
 /* ============================================================
    ส่วนที่ 14 : ประวัติการใช้งาน + ผู้ใช้งาน / สิทธิ์
