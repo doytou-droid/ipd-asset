@@ -114,6 +114,42 @@ img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px s
 .export-option{display:flex;align-items:center;gap:5px;font-size:12px;color:#334155}.export-note{font-size:11px;color:#64748b;background:#f8fafc;border-radius:8px;padding:7px 9px;margin-top:8px}
 .import-card{border:1px solid #e2e8f0;border-radius:12px;padding:14px;background:#fff;height:100%}.import-card h3{font-size:14px;color:#1e3a8a;margin-bottom:5px}.import-card p{font-size:11px;color:#64748b;line-height:1.6;min-height:38px}.import-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.import-count{font-size:11px;color:#0f766e;background:#ecfdf5;display:inline-block;padding:3px 8px;border-radius:20px}
 
+
+/* Export selector v6: อ่านง่าย + รองรับข้อมูลหลักพันโดยไม่สร้างรายการย่อยทั้งหมดจนกว่าจะเปิด */
+.export-selection-box{border:1px solid #cbd5e1;border-radius:10px;background:#fff;padding:12px;margin-top:10px}
+.export-selection-list{margin-top:8px;max-height:520px;overflow:auto;background:#fff;border:1px solid #cbd5e1;border-radius:8px}
+.export-empty{padding:28px;text-align:center;color:#94a3b8;font-size:12px}
+.export-v6-cat{border-bottom:1px solid #e2e8f0}
+.export-v6-cat:last-child{border-bottom:0}
+.export-v6-cat-head{display:grid;grid-template-columns:30px 24px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 10px;background:#f1f5f9}
+.export-v6-group-list{background:#fff}
+.export-v6-icon{width:28px;height:24px;padding:2px 5px;background:#e2e8f0;color:#334155;border-radius:5px;font-size:12px}
+.export-v6-icon:hover{background:#cbd5e1}
+.export-v6-maincheck,.export-v6-group-check{display:flex;align-items:center;justify-content:center;margin:0;cursor:pointer}
+.export-v6-maincheck input,.export-v6-group-check input{width:17px;height:17px;margin:0}
+.export-v6-title,.export-v6-group-title{min-width:0;display:flex;flex-direction:column;gap:2px}
+.export-v6-title b,.export-v6-group-title b{font-size:12.5px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.export-v6-title small,.export-v6-group-title small{font-size:10px;color:#64748b}
+.export-v6-cat-all{white-space:nowrap}
+.export-v6-group{border-top:1px solid #eef2f7}
+.export-v6-group-head{display:grid;grid-template-columns:24px 28px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 12px 8px 26px;background:#fff}
+.export-v6-group-head:hover{background:#f8fafc}
+.export-v6-items{margin:0 12px 8px 74px;border-left:2px solid #e2e8f0;background:#f8fafc}
+.export-v6-item{display:flex;align-items:center;gap:8px;margin:0;padding:6px 10px;border-bottom:1px solid #e5e7eb;cursor:pointer}
+.export-v6-item:last-child{border-bottom:0}
+.export-v6-item:hover{background:#fff}
+.export-v6-item input{width:16px;height:16px;margin:0;flex:0 0 auto}
+.export-v6-item span{min-width:0;display:flex;flex-direction:column;gap:1px}
+.export-v6-item b{font-size:11px;color:#334155}
+.export-v6-item small{font-size:10px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:850px){
+ .export-v6-cat-head{grid-template-columns:28px 24px minmax(0,1fr)}
+ .export-v6-cat-all{grid-column:3;justify-self:start}
+ .export-v6-group-head{grid-template-columns:22px 28px minmax(0,1fr)}
+ .export-v6-group-head>button:last-child{grid-column:3;justify-self:start}
+ .export-v6-items{margin-left:54px}
+}
+
 </style>
 </head>
 <body>
@@ -1173,83 +1209,145 @@ function updateExportGroupChecks(){
 function exportSelectionKey(){return [EX_B,EX_F,EX_R,EX_D].join("|");}
 function ensureExportSelection(){
  const key=exportSelectionKey();
- if(EX_SELECTION_KEY!==key){EX_SELECTED=new Set(exportLocationPool().map(x=>x.a.id));EX_SELECTION_KEY=key;EX_GROUP_OPEN=new Set();EX_CAT_OPEN=new Set();EX_PICK_Q="";}
+ if(EX_SELECTION_KEY!==key){
+  EX_SELECTED=new Set();
+  EX_SELECTION_KEY=key;
+  EX_GROUP_OPEN=new Set();
+  EX_CAT_OPEN=new Set();
+  EX_PICK_Q="";
+ }
 }
 function resetExportSelection(){EX_SELECTION_KEY="";ensureExportSelection();}
-function toggleExportAsset(id,checked){if(checked)EX_SELECTED.add(id);else EX_SELECTED.delete(id);updateExportSelectionStatus();updateExportGroupChecks();}
+function getExportFilteredGroups(){
+ const q=(EX_PICK_Q||"").trim().toLowerCase();
+ let groups=exportAssetGroups();
+ if(!q)return groups;
+ return groups.filter(g=>((g.cat||"")+" "+(CT(g.cat).name||"")+" "+(g.name||"")).toLowerCase().includes(q));
+}
+function toggleExportAsset(id,checked){
+ if(checked)EX_SELECTED.add(id);else EX_SELECTED.delete(id);
+ renderExportSelectionPanel();
+}
 function toggleExportGroup(key,checked){
  const g=exportAssetGroups().find(x=>x.key===key);if(!g)return;
- exportGroupIds(g).forEach(id=>{if(checked)EX_SELECTED.add(id);else EX_SELECTED.delete(id);});
- updateExportSelectionStatus();updateExportGroupChecks();renderExportSelectionPanel();
+ g.items.forEach(x=>{if(checked)EX_SELECTED.add(x.a.id);else EX_SELECTED.delete(x.a.id);});
+ renderExportSelectionPanel();
 }
-function toggleAllExportAssets(checked){ensureExportSelection();exportLocationPool().forEach(x=>{if(checked)EX_SELECTED.add(x.a.id);else EX_SELECTED.delete(x.a.id);});vPrint();}
-function clearExportSelection(){EX_SELECTED.clear();updateExportSelectionStatus();renderExportSelectionPanel();}
-function selectAllExportVisible(){const q=(EX_PICK_Q||"").trim().toLowerCase();exportAssetGroups().forEach(g=>{const hay=(g.cat+" "+g.name).toLowerCase();if(!q||hay.includes(q))g.items.forEach(x=>EX_SELECTED.add(x.a.id));});updateExportSelectionStatus();renderExportSelectionPanel();}
-function toggleExportGroupOpen(key){if(EX_GROUP_OPEN.has(key))EX_GROUP_OPEN.delete(key);else EX_GROUP_OPEN.add(key);renderExportSelectionPanel();}
+function toggleAllExportAssets(checked){
+ ensureExportSelection();
+ exportLocationPool().forEach(x=>{if(checked)EX_SELECTED.add(x.a.id);else EX_SELECTED.delete(x.a.id);});
+ renderExportSelectionPanel();
+}
+function clearExportSelection(){EX_SELECTED.clear();renderExportSelectionPanel();}
+function selectAllExportVisible(){
+ ensureExportSelection();
+ getExportFilteredGroups().forEach(g=>g.items.forEach(x=>EX_SELECTED.add(x.a.id)));
+ renderExportSelectionPanel();
+}
+function toggleExportGroupOpen(key){
+ if(EX_GROUP_OPEN.has(key))EX_GROUP_OPEN.delete(key);else EX_GROUP_OPEN.add(key);
+ renderExportSelectionPanel();
+}
+function toggleExportCategoryOpen(key){
+ if(EX_CAT_OPEN.has(key))EX_CAT_OPEN.delete(key);else EX_CAT_OPEN.add(key);
+ renderExportSelectionPanel();
+}
+function toggleExportCategory(key,checked){
+ const c=exportCategoryGroups().find(x=>x.key===key);if(!c)return;
+ c.groups.forEach(g=>g.items.forEach(x=>{if(checked)EX_SELECTED.add(x.a.id);else EX_SELECTED.delete(x.a.id);}));
+ renderExportSelectionPanel();
+}
 function setExportPickQuery(v){EX_PICK_Q=v||"";renderExportSelectionPanel();}
 function updateExportSelectionStatus(){
- const pool=exportLocationPool(),selectedInPool=pool.reduce((n,x)=>n+(EX_SELECTED.has(x.a.id)?1:0),0);
- const el=document.getElementById("exportSelectionStatus");if(el)el.textContent=`เลือก ${selectedInPool.toLocaleString("th-TH")} / ${pool.length.toLocaleString("th-TH")} รายการ`;
- const all=pool.length>0&&selectedInPool===pool.length;const cb=document.getElementById("ex_select_all");if(cb)cb.checked=all;
- const selSummary=document.getElementById("exportSelectedSummary");
- if(selSummary){
+ const pool=exportLocationPool();
+ const selectedInPool=pool.reduce((n,x)=>n+(EX_SELECTED.has(x.a.id)?1:0),0);
+ const total=pool.length;
+ const el=document.getElementById("exportSelectionStatus");
+ if(el)el.textContent=`เลือก ${selectedInPool.toLocaleString("th-TH")} / ${total.toLocaleString("th-TH")} รายการ`;
+ const all=total>0&&selectedInPool===total;
+ const cb=document.getElementById("ex_select_all");
+ if(cb){cb.checked=all;cb.indeterminate=selectedInPool>0&&!all;}
+ const sum=document.getElementById("exportSelectedSummary");
+ if(sum){
   const chosen=exportAssetGroups().filter(g=>exportGroupSelectedState(g).selected>0);
-  selSummary.innerHTML=chosen.length?chosen.slice(0,12).map(g=>`<span class="chip">${esc(g.name)} · ${exportGroupSelectedState(g).selected.toLocaleString("th-TH")}</span>`).join(" ")+(chosen.length>12?` <span class="chip y">+${(chosen.length-12).toLocaleString("th-TH")} รายการ</span>`:""):'<span style="font-size:11px;color:#94a3b8">ยังไม่ได้เลือกรายการ</span>';
+  sum.innerHTML=chosen.length
+   ? chosen.slice(0,12).map(g=>{const st=exportGroupSelectedState(g);return `<span class="chip">${esc(g.name)} · ${st.selected.toLocaleString("th-TH")}</span>`;}).join("")+(chosen.length>12?` <span class="chip y">+${(chosen.length-12).toLocaleString("th-TH")} รายการ</span>`:"")
+   : '<span style="font-size:11px;color:#94a3b8">ยังไม่ได้เลือกรายการ</span>';
  }
+}
+function bindExportSelectionEvents(host){
+ if(!host||host.dataset.bound==="1")return;
+ host.dataset.bound="1";
+ host.addEventListener("click",e=>{
+  const btn=e.target.closest("[data-export-action]");if(!btn||!host.contains(btn))return;
+  e.preventDefault();
+  const action=btn.dataset.exportAction,key=btn.dataset.key||"";
+  if(action==="cat-open")toggleExportCategoryOpen(key);
+  else if(action==="cat-toggle")toggleExportCategory(key,btn.dataset.checked==="1");
+  else if(action==="group-open")toggleExportGroupOpen(key);
+  else if(action==="group-toggle")toggleExportGroup(key,btn.dataset.checked==="1");
+ });
+ host.addEventListener("change",e=>{
+  const el=e.target;
+  if(el.matches("[data-export-item-id]"))toggleExportAsset(el.dataset.exportItemId,el.checked);
+  else if(el.matches("[data-export-cat-check]"))toggleExportCategory(el.dataset.exportCatCheck,el.checked);
+  else if(el.matches("[data-export-group-check]"))toggleExportGroup(el.dataset.exportGroupCheck,el.checked);
+ });
+}
+function renderExportSelectionPanel(){
+ const host=document.getElementById("exportSelectionList");if(!host)return;
+ ensureExportSelection();
+ bindExportSelectionEvents(host);
+ const q=(EX_PICK_Q||"").trim().toLowerCase();
+ const groups=getExportFilteredGroups();
+ const catMap=new Map();
+ groups.forEach(g=>{if(!catMap.has(g.cat||"none"))catMap.set(g.cat||"none",{key:g.cat||"none",groups:[],qty:0});const c=catMap.get(g.cat||"none");c.groups.push(g);c.qty+=g.qty;});
+ const cats=[...catMap.values()].sort((a,b)=>naturalSort(a.key,b.key));
+ let html="";
+ if(!cats.length){html='<div class="export-empty">ไม่พบรายการตามคำค้น</div>';}
+ else{
+  html=cats.map(c=>{
+   const catOpen=EX_CAT_OPEN.has(c.key)||!!q;
+   const catItems=c.groups.flatMap(g=>g.items);
+   const selected=catItems.reduce((n,x)=>n+(EX_SELECTED.has(x.a.id)?1:0),0);
+   const all=catItems.length>0&&selected===catItems.length;
+   const partial=selected>0&&!all;
+   let out=`<section class="export-v6-cat">
+    <div class="export-v6-cat-head">
+      <button type="button" class="export-v6-icon" data-export-action="cat-open" data-key="${esc(c.key)}">${catOpen?"▾":"▸"}</button>
+      <label class="export-v6-maincheck"><input type="checkbox" data-export-cat-check="${esc(c.key)}" ${all?"checked":""} ${partial?'data-partial="1"':''}><span></span></label>
+      <div class="export-v6-title"><b>${esc(c.key)} · ${esc(CT(c.key).name||"ไม่ระบุหมวด")}</b><small>${c.groups.length.toLocaleString("th-TH")} รายการ · ${catItems.length.toLocaleString("th-TH")} ชิ้น · เลือกแล้ว ${selected.toLocaleString("th-TH")}</small></div>
+      <button type="button" class="btn-s btn-sm export-v6-cat-all" data-export-action="cat-toggle" data-key="${esc(c.key)}" data-checked="${all?"0":"1"}">${all?"ไม่เลือกหมวด":"เลือกทั้งหมวด"}</button>
+    </div>`;
+   if(catOpen){
+    out+=`<div class="export-v6-group-list">`+c.groups.map(g=>{
+      const st=exportGroupSelectedState(g),open=EX_GROUP_OPEN.has(g.key);
+      const itemCount=g.items.length;
+      let inner="";
+      if(open){
+       const items=g.items.slice().sort((x,y)=>naturalSort((x.r.code||"")+"|"+(x.a.no||""),(y.r.code||"")+"|"+(y.a.no||"")));
+       inner=`<div class="export-v6-items">${items.map(x=>`<label class="export-v6-item"><input type="checkbox" data-export-item-id="${esc(x.a.id)}" ${EX_SELECTED.has(x.a.id)?"checked":""}><span><b>${esc(x.a.no||"รอออกเลข")}</b><small>${esc(B(x.r.bid).code||"")} · ชั้น ${esc(FL(x.r.fid).no||"")} · ${esc(x.r.code||"")} ${esc(x.r.name||"")}</small></span></label>`).join("")}</div>`;
+      }
+      return `<section class="export-v6-group">
+       <div class="export-v6-group-head">
+        <label class="export-v6-group-check"><input type="checkbox" data-export-group-check="${esc(g.key)}" ${st.all?"checked":""}><span></span></label>
+        <button type="button" class="export-v6-icon" data-export-action="group-open" data-key="${esc(g.key)}">${open?"▾":"▸"}</button>
+        <div class="export-v6-group-title"><b>${esc(g.name)}</b><small>${itemCount.toLocaleString("th-TH")} รายการ · ${g.qty.toLocaleString("th-TH")} ชิ้น · เลือกแล้ว ${st.selected.toLocaleString("th-TH")}</small></div>
+        <button type="button" class="btn-s btn-sm" data-export-action="group-toggle" data-key="${esc(g.key)}" data-checked="${st.all?"0":"1"}">${st.all?"ยกเลิก":"เลือกทั้งหมด"}</button>
+       </div>${inner}</section>`;
+     }).join("")+`</div>`;
+    }
+   return out+`</section>`;
+  }).join("");
+ }
+ host.innerHTML=html;
+ host.querySelectorAll('[data-partial="1"]').forEach(cb=>cb.indeterminate=true);
+ updateExportSelectionStatus();
 }
 function setPrintPageStyle(){
  let st=document.getElementById("printPageStyle");
  if(!st){st=document.createElement("style");st.id="printPageStyle";document.head.appendChild(st);}
  st.textContent=`@media print{@page{size:${EXPORT_ORIENT==="landscape"?"A4 landscape":"A4 portrait"};margin:${EXPORT_ORIENT==="landscape"?"7mm":"10mm"}}`;
-}
-function toggleExportCategoryOpen(key){if(EX_CAT_OPEN.has(key))EX_CAT_OPEN.delete(key);else EX_CAT_OPEN.add(key);renderExportSelectionPanel();}
-function renderExportSelectionPanel(){
- const host=document.getElementById("exportSelectionList");if(!host)return;
- const q=(EX_PICK_Q||"").trim().toLowerCase();
- const cats=exportCategoryGroups();
- const filtered=cats.map(c=>({...c,groups:c.groups.filter(g=>!q||(g.cat+" "+g.name).toLowerCase().includes(q))})).filter(c=>c.groups.length);
- let html="";
- if(!filtered.length){html='<div class="chart-empty" style="height:100px">ไม่พบรายการครุภัณฑ์</div>';}
- else{
-  // เมื่อค้นหา ให้เปิดหมวดที่ตรงอัตโนมัติ เพื่อให้เข้าถึงรายการได้ทันที
-  if(q)filtered.forEach(c=>EX_CAT_OPEN.add(c.key));
-  for(const c of filtered){
-   const catOpen=EX_CAT_OPEN.has(c.key);
-   const allCatSelected=c.groups.length>0&&c.groups.every(g=>exportGroupSelectedState(g).all);
-   const someCatSelected=c.groups.some(g=>exportGroupSelectedState(g).selected>0);
-   html+=`<div class="export-cat-block">
-    <div class="export-cat-head">
-      <button type="button" class="export-cat-toggle" onclick="toggleExportCategoryOpen(${JSON.stringify(c.key)})">${catOpen?"▾":"▸"}</button>
-      <span class="export-cat-title"><b>${esc(c.label)}</b><small>${c.groups.length.toLocaleString("th-TH")} รายการ · ${c.qty.toLocaleString("th-TH")} ชิ้น</small></span>
-      <label class="export-cat-select"><input type="checkbox" ${allCatSelected?"checked":""} ${someCatSelected&&!allCatSelected?'data-partial="1"':''} onchange="toggleExportCategory(${JSON.stringify(c.key)},this.checked)"> เลือกทั้งหมวด</label>
-    </div>`;
-   if(catOpen){
-    for(const g of c.groups){
-      const st=exportGroupSelectedState(g);const open=EX_GROUP_OPEN.has(g.key);
-      html+=`<div class="export-asset-group">
-        <div class="export-group-row">
-         <input class="export-group-check" data-gkey="${esc(g.key)}" type="checkbox" ${st.all?"checked":""} onchange="toggleExportGroup(${JSON.stringify(g.key)},this.checked)">
-         <button type="button" class="export-expand" onclick="toggleExportGroupOpen(${JSON.stringify(g.key)})">${open?"▾":"▸"}</button>
-         <span class="export-group-name"><b>${esc(g.name)}</b><small>${g.items.length.toLocaleString("th-TH")} รายการ · ${g.qty.toLocaleString("th-TH")} ชิ้น · เลือกแล้ว ${st.selected.toLocaleString("th-TH")}</small></span>
-        </div>`;
-      if(open){
-        const items=g.items.slice().sort((x,y)=>naturalSort((x.r.code||"")+"|"+(x.a.no||""),(y.r.code||"")+"|"+(y.a.no||"")));
-        html+=`<div class="export-subitems">${items.map(x=>`<label class="export-subitem"><input type="checkbox" ${EX_SELECTED.has(x.a.id)?"checked":""} onchange="toggleExportAsset(${JSON.stringify(x.a.id)},this.checked)"><span>${esc(x.a.no||"รอออกเลข")} · ${esc(B(x.r.bid).code||"")} ชั้น ${esc(FL(x.r.fid).no||"")} · ${esc(x.r.code||"")}</span></label>`).join("")}</div>`;
-      }
-      html+=`</div>`;
-    }
-   }
-   html+=`</div>`;
-  }
- }
- host.innerHTML=html;
- document.querySelectorAll('.export-cat-select input[data-partial="1"]').forEach(cb=>cb.indeterminate=true);
- updateExportSelectionStatus();updateExportGroupChecks();
-}
-function toggleExportCategory(key,checked){
- const c=exportCategoryGroups().find(x=>x.key===key);if(!c)return;
- c.groups.forEach(g=>g.items.forEach(x=>{if(checked)EX_SELECTED.add(x.a.id);else EX_SELECTED.delete(x.a.id);}));
- updateExportSelectionStatus();renderExportSelectionPanel();
 }
 function vPrint(){
  syncExportColsFromUI();
@@ -1287,8 +1385,8 @@ function vPrint(){
    </div>
    <div style="margin-top:7px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px">
     <label class="checkline"><input type="checkbox" id="ex_select_all" onchange="toggleAllExportAssets(this.checked)"> เลือกทั้งหมดที่แสดง</label>
-    <button type="button" class="btn-s btn-sm" onclick="selectAllExportVisible()">เลือกตามที่ค้นหา</button>
-    <button type="button" class="btn-s btn-sm" onclick="clearExportSelection()">ไม่เลือกทั้งหมด</button>
+    <button type="button" class="btn-s btn-sm" onclick="selectAllExportVisible()">เลือกทั้งหมดตามคำค้น</button>
+    <button type="button" class="btn-s btn-sm" onclick="clearExportSelection()">ล้างการเลือก</button>
    </div>
    <div style="margin-top:8px">
     <input id="ex_pick_q" value="${esc(EX_PICK_Q)}" placeholder="ค้นหาชื่อครุภัณฑ์..." oninput="setExportPickQuery(this.value)">
