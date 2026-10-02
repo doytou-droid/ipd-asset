@@ -1119,9 +1119,9 @@ async function bulkDel(col){
  }catch(e){alert("ลบไม่สำเร็จ (อาจมีข้อมูลลูกใช้งานอยู่): "+e.message);}}
 
 /* ============================================================
-   ส่วนที่ 13 : Export (ฟอร์ม A4 พร้อมฟิลเตอร์เรียงลำดับ อาคาร -> ชั้น -> ห้อง)
+   ส่วนที่ 13 : Export (ฟอร์ม A4 จัดเรียงคอลัมน์ใหม่ตามสั่ง)
    ============================================================ */
-let EXPORT_COLS={no:true,name:true,spec:true,brand:true,qty:true,price:true,total:true,buy:true,vendor:true,dept:true,status:true,floor:true,room:true};
+let EXPORT_COLS={no:true,name:true,spec:true,brand:true,qty:true,price:true,total:true,buy:true,vendor:true,floor:true,room:true,bld:true,dept:true,status:true,img:true};
 let EX_B="", EX_F="", EX_R="";
 function vPrint(){
  const bOpts=DB.buildings.filter(b=>inB(b.id)).map(b=>[b.id,b.name]);
@@ -1145,7 +1145,7 @@ function vPrint(){
     <option value="">- ทุกห้อง -</option>
     ${rOpts.map(o=>`<option value="${o.id}" ${o.id===EX_R?"selected":""}>${esc(o.code+" "+o.name)}</option>`).join("")}</select></div></div>
 
-  <div style="margin-top:12px"><label>เลือกคอลัมน์ที่จะแสดงในตาราง:</label>
+  <div style="margin-top:12px"><label>เลือกคอลัมน์ที่จะแสดงในตาราง (เรียงตามลำดับ):</label>
    <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px;margin-top:4px">
     <label><input type="checkbox" id="c_no" checked> เลขครุภัณฑ์</label>
     <label><input type="checkbox" id="c_name" checked> รายการ</label>
@@ -1156,10 +1156,12 @@ function vPrint(){
     <label><input type="checkbox" id="c_total" checked> รวม</label>
     <label><input type="checkbox" id="c_buy" checked> วันที่ซื้อ</label>
     <label><input type="checkbox" id="c_vendor" checked> ผู้ขาย</label>
+    <label><input type="checkbox" id="c_floor" checked> ชั้น</label>
+    <label><input type="checkbox" id="c_room" checked> ห้อง</label>
+    <label><input type="checkbox" id="c_bld" checked> อาคาร</label>
     <label><input type="checkbox" id="c_dept" checked> หน่วยงาน</label>
     <label><input type="checkbox" id="c_status" checked> สถานะ</label>
-    <label><input type="checkbox" id="c_floor" checked> ชั้น</label>
-    <label><input type="checkbox" id="c_room" checked> ห้อง</label></div></div>
+    <label><input type="checkbox" id="c_img" checked> รูปถ่ายแบบย่อ</label></div></div>
   <div style="margin-top:14px;display:flex;gap:8px">
    <button class="btn" onclick="execExport()">แสดงตัวอย่าง / สั่งพิมพ์ (A4)</button></div></div>
   <div id="a4box"></div>`;}
@@ -1168,8 +1170,8 @@ function execExport(){
  EXPORT_COLS={
   no:c_no.checked, name:c_name.checked, spec:c_spec.checked, brand:c_brand.checked,
   qty:c_qty.checked, price:c_price.checked, total:c_total.checked, buy:c_buy.checked,
-  vendor:c_vendor.checked, dept:c_dept.checked, status:c_status.checked,
-  floor:c_floor.checked, room:c_room.checked};
+  vendor:c_vendor.checked, floor:c_floor.checked, room:c_room.checked, bld:c_bld.checked,
+  dept:c_dept.checked, status:c_status.checked, img:c_img.checked};
  const rId=EX_R, fId=EX_F, bId=EX_B;
  if(!bId)return alert("กรุณาเลือกอาคาร");
  if(rId)printRoomA4(rId);
@@ -1187,10 +1189,12 @@ function buildThHeaders(){
  if(EXPORT_COLS.total)h+=`<th style="text-align:right">รวม</th>`;
  if(EXPORT_COLS.buy)h+=`<th>วันที่ซื้อ</th>`;
  if(EXPORT_COLS.vendor)h+=`<th>ผู้ขาย</th>`;
- if(EXPORT_COLS.dept)h+=`<th>หน่วยงาน</th>`;
- if(EXPORT_COLS.status)h+=`<th>สถานะ</th>`;
  if(EXPORT_COLS.floor)h+=`<th>ชั้น</th>`;
  if(EXPORT_COLS.room)h+=`<th>ห้อง</th>`;
+ if(EXPORT_COLS.bld)h+=`<th>อาคาร</th>`;
+ if(EXPORT_COLS.dept)h+=`<th>หน่วยงาน</th>`;
+ if(EXPORT_COLS.status)h+=`<th>สถานะ</th>`;
+ if(EXPORT_COLS.img)h+=`<th style="text-align:center">รูปถ่าย</th>`;
  return h+`</tr>`;}
 
 function buildTrRows(list){
@@ -1206,10 +1210,12 @@ function buildTrRows(list){
   if(EXPORT_COLS.total)res+=`<td style="text-align:right">${money((+a.price||0)*(+a.qty||1))}</td>`;
   if(EXPORT_COLS.buy)res+=`<td>${esc(a.buy)}</td>`;
   if(EXPORT_COLS.vendor)res+=`<td>${esc(a.vendor)}</td>`;
-  if(EXPORT_COLS.dept)res+=`<td>${esc(DP(a.rdept).name)}</td>`;
-  if(EXPORT_COLS.status)res+=`<td>${esc(a.status)}</td>`;
   if(EXPORT_COLS.floor)res+=`<td>${esc(FL(r.fid).no)}</td>`;
   if(EXPORT_COLS.room)res+=`<td>${esc(r.code)}</td>`;
+  if(EXPORT_COLS.bld)res+=`<td>${esc(B(r.bid).code)}</td>`;
+  if(EXPORT_COLS.dept)res+=`<td>${esc(DP(a.rdept).name)}</td>`;
+  if(EXPORT_COLS.status)res+=`<td>${esc(a.status)}</td>`;
+  if(EXPORT_COLS.img)res+=`<td style="text-align:center">${a.img?`<img src="${esc(a.img)}" style="width:30px;height:30px;object-fit:cover;border-radius:3px">`:"-"}</td>`;
   return res+`</tr>`;}).join("");}
 
 function paperA4(contentHtml){
@@ -1231,8 +1237,8 @@ function printRoomA4(id){
   <td style="border:0"><b>ห้อง:</b> ${esc(r.code)} ${esc(r.name)}</td></tr><tr>
   <td style="border:0"><b>หน่วยงาน:</b> ${esc(DP(r.dept).name||"-")}</td>
   <td style="border:0" colspan="2"><b>ผู้รับผิดชอบ:</b> ${esc(r.owner)}</td></tr></table>`;
- const table=`<table>${buildThHeaders()}${buildTrRows(as.map(a=>({a,r})))||'<tr><td colspan="15" style="text-align:center">- ไม่มีรายการ -</td></tr>'}
-  <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งสิ้น</b></td><td style="text-align:right" colspan="9"><b>${money(tot)} บาท</b></td></tr></table>`;
+ const table=`<table>${buildThHeaders()}${buildTrRows(as.map(a=>({a,r})))||'<tr><td colspan="16" style="text-align:center">- ไม่มีรายการ -</td></tr>'}
+  <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งสิ้น</b></td><td style="text-align:right" colspan="10"><b>${money(tot)} บาท</b></td></tr></table>`;
  const sign=`<div style="display:flex;justify-content:space-around;margin-top:40px;text-align:center;font-size:12px">
   <div>ลงชื่อ ....................................................<br>(....................................................)</div>
   <div>ลงชื่อ ....................................................<br>(....................................................)</div></div>`;
@@ -1246,7 +1252,7 @@ function printFloorA4(fid){
  const head=`<div style="text-align:center;margin-bottom:10px"><h2>แบบสำรวจ/ทะเบียนครุภัณฑ์ (รายชั้น)</h2>
   <h3>${esc(B(f.bid).name)} — ${esc(f.name)}</h3></div>`;
  const table=`<table>${buildThHeaders()}${buildTrRows(as)}
-  <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งชั้น</b></td><td style="text-align:right" colspan="9"><b>${money(tot)} บาท</b></td></tr></table>`;
+  <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งชั้น</b></td><td style="text-align:right" colspan="10"><b>${money(tot)} บาท</b></td></tr></table>`;
  const sign=`<div style="display:flex;justify-content:space-around;margin-top:40px;text-align:center;font-size:12px">
   <div>ลงชื่อ ....................................................<br>(....................................................)</div>
   <div>ลงชื่อ ....................................................<br>(....................................................)</div></div>`;
@@ -1261,7 +1267,7 @@ function printBldA4(bid){
  const head=`<div style="text-align:center;margin-bottom:10px"><h2>แบบสำรวจ/ทะเบียนครุภัณฑ์ (ทั้งอาคาร)</h2>
   <h3>${esc(b.name)}</h3></div>`;
  const table=`<table>${buildThHeaders()}${buildTrRows(as)}
-  <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งอาคาร</b></td><td style="text-align:right" colspan="9"><b>${money(tot)} บาท</b></td></tr></table>`;
+  <tr><td colspan="6" style="text-align:right"><b>รวมมูลค่าทั้งอาคาร</b></td><td style="text-align:right" colspan="10"><b>${money(tot)} บาท</b></td></tr></table>`;
  const sign=`<div style="display:flex;justify-content:space-around;margin-top:40px;text-align:center;font-size:12px">
   <div>ลงชื่อ ....................................................<br>(....................................................)</div>
   <div>ลงชื่อ ....................................................<br>(....................................................)</div></div>`;
