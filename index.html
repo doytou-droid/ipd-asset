@@ -67,8 +67,20 @@ img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px s
 .sp-tab{position:absolute;left:-30px;top:50%;transform:translateY(-50%);width:30px;height:64px;background:#1d4ed8;color:#fff;
  display:flex;align-items:center;justify-content:center;border-radius:10px 0 0 10px;cursor:pointer;font-size:15px;box-shadow:-3px 0 10px rgba(0,0,0,.2)}
 .sp-body{padding:16px;overflow:auto;width:100%;margin-top:50px}
-@media print{body{background:#fff}header,nav,.noprint{display:none!important}main{padding:0;max-width:none}
- .pagebreak{page-break-after:always;break-after:page}}
+
+/* สไตล์เฉพาะสำหรับหน้า Export A4 */
+.a4sheet{width:210mm;min-height:297mm;padding:15mm;margin:20px auto;background:#fff;box-shadow:0 0 10px rgba(0,0,0,.15);position:relative;font-size:11.5px}
+.a4sheet table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
+.a4sheet th,.a4sheet td{border:1px solid #475569;padding:5px 6px}
+.a4sheet th{background:#f1f5f9}
+.footer-page{position:absolute;bottom:15mm;left:15mm;right:15mm;display:flex;justify-content:space-between;font-size:11px;color:#64748b}
+
+@media print{
+  body{background:#fff !important}
+  header,nav,.noprint{display:none !important}
+  .a4sheet{width:100% !important;min-height:auto !important;padding:0 !important;margin:0 !important;box-shadow:none !important;page-break-after:always}
+  @page{size:A4 portrait;margin:10mm}
+}
 @media(max-width:850px){.g2,.g3,.g4,.g5{grid-template-columns:1fr}}
 </style>
 </head>
@@ -95,7 +107,7 @@ img.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px s
 
 <script>
 /* ============================================================
-   ส่วนที่ 1 : ตั้งค่า Firebase Config (ใส่ค่าจริงของคุณ)
+   ส่วนที่ 1 : ตั้งค่า Firebase Config
    ============================================================ */
 const firebaseConfig = {
   apiKey: "AIzaSyAGu5BvQCUGE7C04C-TVtH-CiA56iTfF2M",
@@ -117,7 +129,7 @@ function emailValid(e){return /@msu\.ac\.th$/i.test((e||"").trim());}
 function authErrorMsg(e){
  const m={ "auth/email-already-in-use":"อีเมลนี้มีบัญชีอยู่แล้วในระบบ",
   "auth/invalid-email":"รูปแบบอีเมลไม่ถูกต้อง",
-  "auth/weak-password":"รหัสผ่านสั้นเกินไป (อย่างน้อย 6 ตัวอักษร)",
+  "auth/weak-password":"รหัสผ่านสั้นเกินไป (ต้องอย่างน้อย 6 ตัวอักษร)",
   "auth/user-not-found":"ไม่พบบัญชีผู้ใช้นี้ในระบบ",
   "auth/wrong-password":"รหัสผ่านไม่ถูกต้อง",
   "auth/invalid-credential":"อีเมลหรือรหัสผ่านไม่ถูกต้อง",
@@ -243,16 +255,13 @@ async function seedIfEmpty(){
  if(!chk.empty)return;
  toast("กำลังสร้างโครงสร้างส่วนบริหารและอาคารเริ่มต้น...");
  
- // ส่วนบริหาร
  const m1=await dbf.collection("managements").add({name:"คณะแพทยศาสตร์",note:"มหาวิทยาลัยมหาสารคาม"});
  const m2=await dbf.collection("managements").add({name:"โรงพยาบาลสุทธาเวช",note:"หน่วยงานบริการทางการแพทย์"});
 
- // อาคาร IPD ใต้ รพ.สุทธาเวช
  const bRef=await dbf.collection("buildings").add({managementId:m2.id,code:"IPD",name:"อาคารผู้ป่วยใน (IPD)",area:"26,241 ตร.ม.",
   beds:"193 เตียง",note:"OR 14 ห้อง / ICU 29 เตียง / VIP 49 ห้อง",plan:"",img:""});
  const bid=bRef.id;
 
- // อาคาร OPD รพ.สุทธาเวช
  const bOpd=await dbf.collection("buildings").add({managementId:m2.id,code:"OPD",name:"อาคารผู้ป่วยนอก (OPD) โรงพยาบาลสุทธาเวช",area:"อาคารสูง 6 ชั้น",
   beds:"รองรับผู้ป่วยนอก 300 คน/วัน",note:"เปิดให้บริการ 25 พ.ค. 2566",plan:"",img:""});
  const bidOpd=bOpd.id;
@@ -267,11 +276,9 @@ async function seedIfEmpty(){
  const addRoom=async(bId,fid,code,name,dept)=>dbf.collection("rooms").add({bid:bId,fid,code,name,dept:dept||"",
   owner:"-",tel:"",note:"",x:null,y:null,photos:[]});
 
- // สร้างห้อง IPD ตัวอย่าง
  const f7=await addFloor(bid,"7","ชั้น 7 — หอผู้ป่วยสามัญชาย 48 เตียง",dM);
  for(let i=1;i<=4;i++)await addRoom(bid,f7,"7-W"+i,"ห้องผู้ป่วยรวม "+i,dM);
 
- // สร้างห้อง OPD ตัวอย่าง
  const fOpd1=await addFloor(bidOpd,"1","ชั้น 1 — ฉุกเฉินและเวชระเบียน",dPha);
  await addRoom(bidOpd,fOpd1,"OPD1-01","จุดประชาสัมพันธ์",dPha);
  await addRoom(bidOpd,fOpd1,"OPD1-02","ห้องฉุกเฉิน (ER)",dPha);
@@ -656,12 +663,12 @@ function flList(){
     const as=rows.filter(x=>x.a.room===r.id).map(x=>x.a);
     if((DF.q||DF.c||DF.s||DF.d1||DF.d2)&&!as.length)return"";
     cnt+=as.reduce((s,a)=>s+(+a.qty||1),0);
-    const isAssetOpen=openRoomAssets[r.id]!==false; // เปิดเป็นค่าเริ่มต้น
+    const isAssetOpen=openRoomAssets[r.id]!==false;
     return `<div class="room"><div class="rh">
      <div><b>${esc(r.code)} · ${esc(r.name)}</b> ${r.x!=null?'<span class="chip g">ปักหมุดแล้ว</span>':""}
       <div style="font-size:12px;color:#64748b">หน่วยงาน: ${esc(DP(r.dept).name||"-")} · ผู้รับผิดชอบ: ${esc(r.owner)}</div></div>
      <div class="noprint" style="display:flex;gap:5px">
-      <button class="btn-s btn-sm" onclick="openRoomAssets['${r.idW||r.id}']=!${isAssetOpen};flList()">${isAssetOpen?"▼ ยุบครุภัณฑ์":"▲ ขยายครุภัณฑ์"} (${as.length})</button>
+      <button class="btn-s btn-sm" onclick="openRoomAssets['${r.id}']=!${isAssetOpen};flList()">${isAssetOpen?"▼ ยุบครุภัณฑ์":"▲ ขยายครุภัณฑ์"} (${as.length})</button>
       <button class="btn-s btn-sm" onclick="roomView('${r.id}')">ภาพห้อง</button>
       ${canAddAsset(r)?`<button class="btn btn-sm" onclick="assetForm('${r.id}')">+ ครุภัณฑ์</button>`:""}</div></div>
      ${isAssetOpen?(as.length?assetTable(as,r):'<div style="color:#94a3b8;font-size:12px;margin-top:6px">ยังไม่มีครุภัณฑ์ในห้องนี้</div>'):""}</div>`;
@@ -705,7 +712,7 @@ function vAsset(){
    <td>${esc(B(r.bid).code)} / ${esc(FL(r.fid).no)} / ${esc(r.name)}</td>
    <td>${esc(a.brand)} ${esc(a.model)}</td><td>${a.qty||1}</td><td style="text-align:right">${money(a.price)}</td>
    <td>${esc(a.buy)}</td><td><span class="chip ${a.status==="ใช้งานปกติ"?"g":a.status==="ชำรุด"?"r":"y"}">${esc(a.status)}</span></td>
-   <td class="noprint"><button class="btn-s btn-sm" onclick="assetView('${a.id}')">ดู</button></td></tr>`).join("")
+   <td class="noprint"><button class="btn-s btn-sm" onclick="assetView('${a.id}')">ดู</button></td></tr>`).join("")}
    ||'<tr><td colspan=11 style="color:#94a3b8">ไม่พบรายการ</td></tr>'}</table></div>`;}
 
 /* ============================================================
@@ -1019,12 +1026,12 @@ async function bulkDel(col){
  }catch(e){alert("ลบไม่สำเร็จ (อาจมีข้อมูลลูกใช้งานอยู่): "+e.message);}}
 
 /* ============================================================
-   ส่วนที่ 13 : Export (ฟอร์ม A4 สมบูรณ์ จัดหน้า/เลือกคอลัมน์ได้)
+   ส่วนที่ 13 : Export (ฟอร์ม A4 สมบูรณ์ ซ่อนเงา/ปุ่มตอนพิมพ์)
    ============================================================ */
 let EXPORT_COLS={no:true,name:true,spec:true,brand:true,qty:true,price:true,total:true,buy:true,vendor:true,dept:true,status:true};
 function vPrint(){
  const bOpts=DB.buildings.map(b=>[b.id,b.name]);
- const fOpts=DB.floors.map(f=>[f.id,B(f.bid).code+" · "+f.name]);
+ const fOpts=DB.floors.filter(f=>inB(f.bid)).map(f=>[f.id,B(f.bid).code+" · "+f.name]);
  const rOpts=visRooms().map(r=>[r.id,B(r.bid).code+" / "+FL(r.fid).no+" / "+r.code+" "+r.name]);
  view.innerHTML=`<div class="card noprint"><b>เครื่องมือ Export / พิมพ์รายงาน A4</b>
   <div class="row g3" style="margin-top:10px">
@@ -1095,17 +1102,6 @@ function paperA4(contentHtml){
  setTimeout(()=>{
   a4box.innerHTML=`<div class="noprint" style="text-align:center;margin:12px">
    <button class="btn" onclick="window.print()" style="padding:10px 24px;font-size:16px">🖨️ พิมพ์เอกสาร / บันทึกเป็น PDF (A4)</button></div>
-   <style>
-    @media print{body{background:#fff}header,nav,.noprint{display:none!important}
-     .a4sheet{width:210mm;min-height:297mm;padding:15mm;margin:0 auto;page-break-after:always;position:relative;background:#fff;font-size:11.5px}
-     .pagenum::after{content:counter(page)}
-    }
-    .a4sheet{width:210mm;min-height:297mm;padding:15mm;margin:20px auto;background:#fff;box-shadow:0 0 10px rgba(0,0,0,.15);position:relative;font-size:11.5px}
-    .a4sheet table{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
-    .a4sheet th,.a4sheet td{border:1px solid #475569;padding:5px 6px}
-    .a4sheet th{background:#f1f5f9}
-    .footer-page{position:absolute;bottom:15mm;left:15mm;right:15mm;display:flex;justify-content:space-between;font-size:11px;color:#64748b}
-   </style>
    ${contentHtml}`;
   a4box.scrollIntoView({behavior:"smooth"});
  },50);}
