@@ -1428,6 +1428,7 @@ function vPrint(){
  if(EX_R&&!rOpts.find(x=>x.id===EX_R))EX_R="";
  const dOpts=sortedDepts(DB.depts);ensureExportSelection();
  const pool=exportLocationPool();const activeCount=EXPORT_ORDER.filter(k=>EXPORT_COLS[k]).length;
+ 
  view.innerHTML=`<div class="card noprint"><b>เครื่องมือ Export / พิมพ์รายงาน A4</b>
   <div class="hint" style="margin-top:8px">ตำแหน่ง: หน่วยงาน → อาคาร → ชั้น → ห้อง · เลือกเฉพาะรายการที่ต้องการพิมพ์ได้</div>
   <div class="row g4" style="margin-top:10px">
@@ -1457,22 +1458,135 @@ function vPrint(){
     <button type="button" class="btn-s btn-sm" onclick="selectAllExportVisible()">เลือกทั้งหมดตามคำค้น</button>
     <button type="button" class="btn-s btn-sm" onclick="clearExportSelection()">ล้างการเลือก</button>
    </div>
-   <div style="margin-top:8px">
-    <input id="ex_pick_q" value="${esc(EX_PICK_Q)}" placeholder="ค้นหาชื่อครุภัณฑ์..." oninput="setExportPickQuery(this.value)">
+   <div style="margin-top:8px;">
+    <input type="text" placeholder="ค้นหาครุภัณฑ์ที่ต้องการพิมพ์..." value="${EX_PICK_Q}" oninput="setExportPickQuery(this.value)" style="width:100%; max-width:300px; padding:6px; border:1px solid #cbd5e1; border-radius:6px;">
    </div>
-   <div id="exportSelectedSummary" style="display:flex;gap:5px;flex-wrap:wrap;margin-top:8px"></div>
-   <div id="exportSelectionList" class="export-selection-list" style="max-height:420px"></div>
+   <div id="exportSelectionList" class="export-selection-list"></div>
   </div>
-  <div class="export-order-box"><b style="font-size:13px;color:#1e3a8a">เลือกคอลัมน์และกำหนดลำดับ</b>
-   <div class="export-note">ติ๊กข้อมูลที่ต้องการ และใช้ ▲ / ▼ เพื่อกำหนดก่อน–หลัง โดย “ที่” อยู่หน้าสุดเสมอ</div>
-   <div class="export-order-list">${EXPORT_ORDER.map((key,i)=>{const f=EXPORT_FIELDS.find(x=>x.key===key);return `<div class="export-order-item"><span class="ord">${i+1}</span>
-    <label style="display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" id="c_${key}" ${EXPORT_COLS[key]?"checked":""} onchange="syncExportColsFromUI()"> ${esc(f.label)}</label>
-    <button type="button" ${i===0?"disabled":""} onclick="moveExportCol('${key}',-1)">▲</button><button type="button" ${i===EXPORT_ORDER.length-1?"disabled":""} onclick="moveExportCol('${key}',1)">▼</button></div>`}).join("")}</div>
-  </div>
-  <div style="margin-top:14px"><button class="btn" onclick="execExport()">แสดงตัวอย่าง / สั่งพิมพ์ (A4)</button></div>
- </div><div id="a4box"></div>`;
- renderExportSelectionPanel();updateExportSelectionStatus();setPrintPageStyle();
+ </div>
+ <div class="export-preview-toolbar noprint" style="text-align:center; margin-top:16px;">
+  <button class="btn" style="font-size:15px;padding:10px 24px" onclick="window.print()">🖨️ พิมพ์รายงาน (A4)</button>
+ </div>
+ <div id="a4box"></div>`;
+
+ renderExportSelectionPanel();
+ if(typeof renderExportA4Preview === 'function') {
+   renderExportA4Preview();
+ }
 }
+ /* ============================================================
+   ส่วนเพิ่มเติม : ฟังก์ชันจัดเรียงหน้ากระดาษ A4 (Export Preview)
+   ============================================================ */
+function renderExportA4Preview() {
+  const a4box = document.getElementById("a4box");
+  if (!a4box) return;
+
+  setPrintPageStyle(); // อัปเดตคำสั่ง @page (แนวตั้ง/แนวนอน) สำหรับเวลาสั่งพิมพ์จริง
+
+  // 1. ดึงข้อมูลครุภัณฑ์เฉพาะรายการที่ถูกติ๊กเลือก
+  const pool = exportLocationPool().filter(x => EX_SELECTED.has(x.a.id));
+  if (pool.length === 0) {
+    a4box.innerHTML = '<div class="card" style="text-align:center; color:#94a3b8; padding:40px; margin-top:20px;">ยังไม่ได้เลือกรายการครุภัณฑ์<br>กรุณาติ๊กเลือกรายการที่ต้องการพิมพ์จากด้านบน</div>';
+    return;
+  }
+
+  // 2. แบ่งกลุ่มข้อมูล (Grouping) ตามที่ผู้ใช้เลือก (EX_VIEW)
+  let groups = {};
+  if (EX_VIEW === "none") {
+    groups["รายการครุภัณฑ์ทั้งหมด"] = pool;
+  } else {
+    pool.forEach(x => {
+      let g = "ไม่ระบุ";
+      if (EX_VIEW === "room") g = `${B(x.r.bid).name || ""} > ชั้น ${FL(x.r.fid).no || ""} > ${x.r.code || ""} ${x.r.name || ""}`;
+      else if (EX_VIEW === "dept") g = DP(x.a.rdept || x.r.dept).name || "ไม่ระบุหน่วยงาน";
+      else if (EX_VIEW === "status") g = x.a.status || "ไม่ระบุสถานะ";
+      else if (EX_VIEW === "category") g = `${x.a.cat} · ${CT(x.a.cat).name || "ไม่ระบุหมวด"}`;
+      
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(x);
+    });
+  }
+
+  // 3. จัดเตรียมหัวตาราง (Table Headers)
+  const colLabels = {
+    img: "รูป", no: "เลขครุภัณฑ์", name: "รายการ", spec: "คุณลักษณะ",
+    brand: "ยี่ห้อ/รุ่น", qty: "จน.", price: "ราคา/หน่วย", total: "ราคารวม",
+    buy: "วันที่ซื้อ", vendor: "ผู้ขาย", floor: "ชั้น", room: "ห้อง",
+    dept: "หน่วยงาน", status: "สถานะ"
+  };
+
+  const activeCols = EXPORT_ORDER.filter(k => EXPORT_COLS[k]);
+  const thead = `<tr>${activeCols.map(k => `<th>${colLabels[k]}</th>`).join("")}</tr>`;
+
+  // 4. จัดการแบ่งหน้ากระดาษ (Pagination)
+  const maxRows = EXPORT_ORIENT === "portrait" ? 22 : 15; // จำนวนบรรทัดสูงสุดต่อ 1 หน้า
+  let pages = [];
+  const groupKeys = Object.keys(groups).sort(naturalSort);
+
+  for (const gKey of groupKeys) {
+    const items = groups[gKey];
+    // เรียงลำดับตามเลขครุภัณฑ์ภายในกลุ่ม
+    items.sort((x, y) => naturalSort(x.a.no || "", y.a.no || "")); 
+    
+    let i = 0;
+    while (i < items.length) {
+      pages.push({ group: gKey, items: items.slice(i, i + maxRows) });
+      i += maxRows;
+    }
+  }
+
+  // 5. สร้าง HTML สำหรับหน้ากระดาษ A4 ทั้งหมด
+  let html = "";
+  pages.forEach((page, idx) => {
+    const trs = page.items.map(x => {
+      return `<tr>${activeCols.map(k => {
+        let val = "-";
+        if (k === "img") val = x.a.img ? `<img src="${esc(x.a.img)}" class="export-thumb">` : "";
+        else if (k === "no") val = esc(x.a.no) || '<span style="color:#cbd5e1">รอออกเลข</span>';
+        else if (k === "name") val = `<b>${esc(x.a.name)}</b>`;
+        else if (k === "spec") val = esc(x.a.spec);
+        else if (k === "brand") val = `${esc(x.a.brand)}${esc(x.a.model)}`;
+        else if (k === "qty") val = x.a.qty || 1;
+        else if (k === "price") val = money(x.a.price);
+        else if (k === "total") val = money((x.a.price || 0) * (x.a.qty || 1));
+        else if (k === "buy") val = esc(x.a.buy);
+        else if (k === "vendor") val = esc(x.a.vendor);
+        else if (k === "floor") val = esc(FL(x.r.fid).no);
+        else if (k === "room") val = esc(x.r.code);
+        else if (k === "dept") val = esc(DP(x.a.rdept || x.r.dept).name);
+        else if (k === "status") val = esc(x.a.status);
+        return `<td>${val}</td>`;
+      }).join("")}</tr>`;
+    }).join("");
+
+    html += `<div class="a4sheet ${EXPORT_ORIENT}">
+      <h2 style="text-align:center; margin-bottom: 4px; font-size: 16px;">รายงานทะเบียนครุภัณฑ์</h2>
+      <h3 style="text-align:center; color:#475569; margin-bottom: 12px; font-size: 13px;">${EX_VIEW !== 'none' ? `กลุ่ม: ${esc(page.group)}` : "รายการครุภัณฑ์ทั้งหมด"}</h3>
+      <table>
+        <thead>${thead}</thead>
+        <tbody>${trs}</tbody>
+      </table>
+      <div class="footer-page">
+        <span>พิมพ์เมื่อ: ${new Date().toLocaleString("th-TH")}</span>
+        <span>หน้า ${idx + 1} / ${pages.length}</span>
+      </div>
+    </div>`;
+  });
+
+  a4box.innerHTML = html;
+}
+
+// Hook เพื่อให้หน้าพรีวิว A4 อัปเดตอัตโนมัติทันที ที่เรากดติ๊กเลือกครุภัณฑ์
+const _originalUpdateExportSelectionStatus = updateExportSelectionStatus;
+updateExportSelectionStatus = function() {
+  if (typeof _originalUpdateExportSelectionStatus === 'function') {
+    _originalUpdateExportSelectionStatus();
+  }
+  renderExportA4Preview();
+};
+</script>
+</body>
+</html>
 function execExport(){
  EXPORT_FIELDS.forEach(f=>{const el=document.getElementById("c_"+f.key);EXPORT_COLS[f.key]=!!(el&&el.checked);});
  syncExportColsFromUI();ensureExportSelection();
