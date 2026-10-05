@@ -597,11 +597,11 @@ function vDash(){
    <div style="background:#f8fafc;padding:10px;border-radius:8px">หมวดที่พบ<br><b style="font-size:20px;color:#1d4ed8">${Object.keys(catMap).length}</b></div></div></div>
    <div class="card"><h3 style="margin-bottom:8px">รายการที่ควรติดตาม</h3><div class="follow-list">${bad.slice(0,10).map(a=>{const r=RM(a.room);return `<div class="follow-item">${a.img?`<img src="${esc(a.img)}">`:`<div style="width:42px;height:42px;background:#eef2f7;border-radius:8px"></div>`}<div><div class="name">${esc(a.name)}</div><div class="meta">${esc(B(r.bid).code)} · ชั้น ${esc(FL(r.fid).no)} · ${esc(r.code)}</div></div><span class="chip ${a.status==="ชำรุด"?"r":"y"}">${esc(a.status)}</span></div>`}).join("")||'<div class="chart-empty">ไม่มีรายการต้องติดตาม</div>'}</div></div></div>`;
  setTimeout(()=>{if(!window.Chart)return;
-  makeChart("chStatus","doughnut",{labels:statusEntries.map(x=>x[0]),datasets:[{data:statusEntries.map(x=>x[1]),backgroundColor:["#22c55e","#f59e0b","#ef4444","#3b82f6","#64748b","#8b5cf6"],borderWidth:0}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{font:{family:"Sarabun"}}}}});
-  makeChart("chCat","bar",{labels:topCats.map(x=>x.k),datasets:[{label:"ชิ้น",data:topCats.map(x=>x.v),backgroundColor:"#2563eb",borderRadius:7}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{precision:0}}}}});
+   makeChart("chStatus","doughnut",{labels:statusEntries.map(x=>x[0]),datasets:[{data:statusEntries.map(x=>x[1]),backgroundColor:["#22c55e","#f59e0b","#ef4444","#3b82f6","#64748b","#8b5cf6"],borderWidth:0}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{font:{family:"Sarabun"}}}}});
+  makeChart("chCat","bar",{labels:topCats.map(x=>x.k),datasets:[{label:"ชิ้น",data:topCats.map(x=>x.v),backgroundColor:"#2563eb",borderRadius:7}]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{precision:0}}}});
   makeChart("chBld","bar",{labels:topBld.map(x=>x[0]),datasets:[{label:"ชิ้น",data:topBld.map(x=>x[1]),backgroundColor:"#0f766e",borderRadius:7}]},{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{ticks:{font:{size:9}}}}});
  },30);}
-
+ 
 /* ============================================================
    ส่วนที่ 8 : ผังอาคาร + ปักหมุดห้อง + แถบเลื่อนด้านขวา
    ============================================================ */
