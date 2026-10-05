@@ -159,7 +159,6 @@ const ANGLES=["ป้ายหน้าห้อง/ทางเข้า","ภ�
  "ห้องน้ำในห้อง","หน้าต่าง/ระเบียง","มุมอื่น ๆ"];
 const pageAllowed=k=>isSuper()||!!(DB.perms[ME?.role]?.pages?.[k]);
 
-/* เอาเมนู "ข้อมูล/รายละเอียด" และ "ตามครุภัณฑ์" ออก เหลือเฉพาะที่ใช้งาน */
 const MENU=[
  ["dash","ภาพรวม (Dashboard)",()=>pageAllowed("dash")],
  ["plan","ผังอาคาร/ปักหมุดห้อง",()=>pageAllowed("plan")],
@@ -227,7 +226,8 @@ function toast(msg){
  clearTimeout(window._tt);window._tt=setTimeout(()=>t.style.display="none",2600);}
 
 let DB={managements:[],buildings:[],floors:[],rooms:[],depts:[],cats:[],assets:[],users:[],logs:[],perms:{}};
-let ME=null, TAB="dash", DIRTY=false, UNSUBS=[], rerenderTimer=null;
+let ME=null, TAB="dash", DIRTY=false, UNSUBS=[], rerenderTimer=null, PT="bldadmin";
+
 function esc(s){return(s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function money(n){return(+n||0).toLocaleString("th-TH",{minimumFractionDigits:2});}
 function log(a,d){const entry={t:new Date().toISOString(),u:ME?(ME.em||ME.name||"ผู้ดู"):"system",act:a,detail:d};
