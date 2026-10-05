@@ -618,7 +618,7 @@ function vPlan(){
   <div><label>เลือกอาคาร</label><select onchange="PL.bid=this.value;PL.fid='';PL.room='';vPlan()">
    ${bs.map(x=>`<option value="${x.id}" ${x.id===b.id?"selected":""}>${esc(x.code)} — ${esc(x.name)}</option>`).join("")}</select></div>
   <div><label>เลือกชั้น</label><select onchange="PL.fid=this.value;PL.room='';vPlan()">
-   ${fls.map(x=>`<option value="${x.id}" ${x.id===PL.fid?"selected":""}>${esc(f.name)}</option>`).join("")}</select></div>
+${fls.map(x=>`<option value="${x.id}" ${x.id===PL.fid?"selected":""}>ชั้น ${esc(x.no || "-")} — ${esc(x.name || "ยังไม่ระบุชื่อชั้น")}</option>`).join("")}
   <div style="display:flex;align-items:flex-end;gap:6px;flex-wrap:wrap">
    ${canBld(b.id,"e")?`<button class="btn-s btn-sm" onclick="upBldImg('${b.id}','img')">ภาพรวมอาคาร</button>
    <button class="btn-s btn-sm" onclick="upBldImg('${b.id}','plan')">ผังอาคาร</button>`:""}</div></div></div>
