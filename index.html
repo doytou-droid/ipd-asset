@@ -645,11 +645,7 @@ function vPlan(){
   ${f.plan?`<div class="planwrap" id="pw" style="${PL.pin?"cursor:crosshair;outline:3px dashed #059669;outline-offset:3px":""}"
     onclick="clickPlan(event)">
     <img src="${esc(f.plan)}" draggable="false">
-    ${rms.filter(r=>r.x!=null).map(r=>`<div class="pin ok" style="left:${r.x}%;top:${r.y}%"
-      onmouseenter="${PL.pin?"":"sidePeek('"+r.id+"')"}"
-      onmouseleave="${PL.pin?"":"sideLeaveMaybe()"}"
-      onclick="event.stopPropagation();${PL.pin?`if(confirm('ลบหมุดห้อง ${esc(r.code)} ?'))rmPin('${r.id}')`:`sidePin('${r.id}')`}">${esc(r.code)}</div>`).join("")}
-   </div>`:'<div class="hint" style="margin-top:8px"><b>ยังไม่มีผังชั้นนี้</b> — ต้องกดปุ่ม ① อัปโหลดผังชั้นก่อน จึงจะปักหมุดได้</div>'}
+      ${rms.filter(r=>r.x!=null).map(r=>`<div class="pin ok" style="left:${r.x}%;top:${r.y}%" onclick="sidePin('${r.id}')">${esc(r.code)}</div>`).join("")}</div>`:'<div class="hint">ยังไม่มีผังชั้นนี้ — กรุณาอัปโหลดผังชั้นก่อน</div>'}</div>`;}
   ${f.img?`<div style="margin-top:10px"><b style="font-size:13px">ภาพถ่ายชั้น</b><br>
    <img src="${esc(f.img)}" style="max-width:100%;border-radius:8px;margin-top:6px"></div>`:""}</div>`;}
 async function upBldImg(id,key){
